@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="pl" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout/base :: layout(~{::main})}">
+<body>
+<main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 w-full flex-grow relative">
+
+    <div class="mb-8 border-b border-gray-200 pb-5">
+        <h2 class="text-3xl font-bold text-gray-800">Moje ogłoszenia</h2>
+        <p class="text-gray-500 mt-2">Zarządzaj swoimi wystawionymi zwierzakami. Zmieniaj statusy, gdy zwierzak znajdzie nowy dom.</p>
+    </div>
+
+    <!-- Gdy użytkownik nie dodał jeszcze żadnego ogłoszenia -->
+    <div th:if="${#lists.isEmpty(ads)}" class="text-center py-20 bg-white rounded-2xl border border-dashed border-gray-300">
+        <i class="ph ph-folder-open text-6xl text-gray-300 mb-4"></i>
+        <h3 class="text-xl font-medium text-gray-600">Nie masz jeszcze żadnych ogłoszeń</h3>
+        <p class="text-gray-400 mt-2 mb-6">Dodaj swoje pierwsze ogłoszenie i pomóż zwierzakowi znaleźć dom.</p>
+        <a th:href="@{/ads/new}" class="inline-block bg-primary hover:bg-primaryHover text-white px-6 py-3 rounded-full font-bold transition">
+            Dodaj ogłoszenie
+        </a>
+    </div>
+
+    <!-- Siatka własnych ogłoszeń -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6" th:unless="${#lists.isEmpty(ads)}">
+
+        <article th:each="ad : ${ads}" class="bg-surface rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col transition hover:shadow-md">
+
+            <!-- Obszar zdjęcia (Klikalny - Podgląd) -->
+            <div class="relative h-48 bg-gray-100 flex-shrink-0 cursor-pointer group overflow-hidden"
+                 th:hx-get="@{/ads/{id}(id=${ad.id})}"
+                 hx-target="#modal-container"
+                 hx-swap="innerHTML">
+
+                <img th:if="${not #lists.isEmpty(ad.imageUrls)}" th:src="${ad.imageUrls[0]}" alt="Zdjęcie" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+                <div th:if="${#lists.isEmpty(ad.imageUrls)}" class="w-full h-full flex items-center justify-center text-gray-300 group-hover:scale-105 transition-transform duration-500">
+                    <i class="ph ph-paw-print text-5xl"></i>
+                </div>
+
+                <!-- Nakładka Podglądu (Pojawia się po najechaniu) -->
+                <div class="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center z-10">
+                    <div class="bg-white/95 text-gray-800 px-5 py-2 rounded-full font-bold flex items-center shadow-lg transform translate-y-4 group-hover:translate-y-0 transition-all duration-300">
+                        <i class="ph text-xl ph-eye mr-2 text-primary"></i> Podgląd
+                    </div>
+                </div>
+
+                <!-- Etykieta Statusu -->
+                <div th:if="${ad.status.name() == 'ACTIVE'}" class="absolute top-3 right-3 bg-green-500 text-white px-3 py-1 rounded-md text-xs font-bold shadow-sm flex items-center z-20">
+                    <i class="ph-fill ph-check-circle mr-1"></i> Aktywne
+                </div>
+                <div th:if="${ad.status.name() == 'ADOPTED'}" class="absolute top-3 right-3 bg-purple-500 text-white px-3 py-1 rounded-md text-xs font-bold shadow-sm flex items-center z-20">
+                    <i class="ph-fill ph-heart mr-1"></i> Adoptowany
+                </div>
+                <div th:if="${ad.status.name() == 'ARCHIVED'}" class="absolute top-3 right-3 bg-gray-500 text-white px-3 py-1 rounded-md text-xs font-bold shadow-sm flex items-center z-20">
+                    <i class="ph-fill ph-archive mr-1"></i> Zakończone
+                </div>
+            </div>
+
+            <div class="p-5 flex-grow flex flex-col">
+                <span class="text-xs font-bold text-primary uppercase tracking-wider mb-1" th:text="${ad.category.name}">Kategoria</span>
+
+                <h3 class="text-lg font-bold text-gray-800 mb-1 leading-tight line-clamp-2 cursor-pointer hover:text-primary transition-colors"
+                    th:hx-get="@{/ads/{id}(id=${ad.id})}"
+                    hx-target="#modal-container"
+                    hx-swap="innerHTML"
+                    th:text="${ad.title}" title="Kliknij, aby otworzyć podgląd">Tytuł</h3>
+
+                <p class="text-sm text-gray-500 mb-4 flex items-center">
+                    <i class="ph ph-calendar-blank mr-1"></i> Dodano: <span th:text="${#temporals.format(ad.createdAt, 'dd.MM.yyyy')}"></span>
+                </p>
+
+                <!-- POPRAWKA: Przyciski ułożone w kolumnie (flex-col) dla lepszej czytelności -->
+                <div class="mt-auto pt-4 border-t border-gray-100 flex flex-col gap-2" th:if="${ad.status.name() == 'ACTIVE'}">
+
+                    <!-- Główny przycisk Edycji (zajmuje 100% szerokości) -->
+                    <a th:href="@{/ads/{id}/edit(id=${ad.id})}" class="w-full bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-700 py-2 rounded-xl text-sm font-bold transition flex items-center justify-center" title="Edytuj ogłoszenie">
+                        <i class="ph-fill ph-pencil-simple mr-2"></i> Edytuj ogłoszenie
+                    </a>
+
+                    <!-- Drugi rząd: Przyciski statusów (obok siebie, 50/50) -->
+                    <div class="flex gap-2">
+                        <!-- Adoptowany -->
+                        <form th:action="@{/my-ads/{id}/status(id=${ad.id})}" method="post" class="flex-1">
+                            <input type="hidden" name="status" value="ADOPTED" />
+                            <button type="button" onclick="openConfirmModal(this, 'Czy na pewno chcesz oznaczyć to ogłoszenie jako Adoptowane? Tej akcji nie można cofnąć.', 'ADOPTED')" class="w-full bg-purple-50 hover:bg-purple-100 border border-purple-200 text-purple-700 py-2 rounded-xl text-sm font-bold transition flex items-center justify-center" title="Oznacz, że znalazł dom">
+                                <i class="ph-fill ph-heart mr-1"></i> Adoptowany
+                            </button>
+                        </form>
+
+                        <!-- Zakończ -->
+                        <form th:action="@{/my-ads/{id}/status(id=${ad.id})}" method="post" class="flex-1">
+                            <input type="hidden" name="status" value="ARCHIVED" />
+                            <button type="button" onclick="openConfirmModal(this, 'Czy na pewno chcesz zakończyć to ogłoszenie? Przestanie być widoczne na liście.', 'ARCHIVED')" class="w-full bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-700 py-2 rounded-xl text-sm font-bold transition flex items-center justify-center" title="Wycofaj ogłoszenie">
+                                <i class="ph-fill ph-archive mr-1"></i> Zakończ
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Informacja dla zakończonych -->
+                <div class="mt-auto pt-4 border-t border-gray-100 text-center" th:unless="${ad.status.name() == 'ACTIVE'}">
+                    <span class="text-sm text-gray-500 font-medium">Ogłoszenie jest nieaktywne</span>
+                </div>
+
+            </div>
+        </article>
+
+    </div>
+
+    <!-- Niestandardowy Modal Potwierdzenia -->
+    <div id="custom-confirm-modal" class="fixed inset-0 bg-black/60 z-[110] hidden items-center justify-center p-4 fade-in" onclick="if(event.target === this) closeConfirmModal()">
+        <div class="bg-white rounded-3xl w-full max-w-sm p-8 shadow-2xl relative text-center">
+
+            <div id="modal-icon-container" class="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-5">
+                <i id="modal-icon" class="ph text-4xl"></i>
+            </div>
+
+            <h3 class="text-2xl font-bold text-gray-800 mb-3">Czy na pewno?</h3>
+            <p id="confirm-message" class="text-gray-500 mb-8 leading-relaxed">Czy na pewno chcesz wykonać tę akcję?</p>
+
+            <div class="flex flex-col space-y-3">
+                <button id="confirm-action-btn" onclick="executeAction()" class="w-full text-white py-3 rounded-xl font-bold transition shadow-sm">
+                    Potwierdź
+                </button>
+                <button onclick="closeConfirmModal()" class="w-full bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 py-3 rounded-xl font-bold transition">
+                    Anuluj
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Skrypt obsługujący Modal -->
+    <script>
+            let formToSubmit = null;
+
+            function openConfirmModal(buttonElement, message, actionType) {
+                formToSubmit = buttonElement.closest('form');
+                document.getElementById('confirm-message').innerText = message;
+
+                const confirmBtn = document.getElementById('confirm-action-btn');
+                const iconContainer = document.getElementById('modal-icon-container');
+                const icon = document.getElementById('modal-icon');
+
+                // Dynamiczne dopasowanie stylów modala
+                if(actionType === 'ADOPTED') {
+                    confirmBtn.className = 'w-full bg-purple-600 hover:bg-purple-700 text-white py-3 rounded-xl font-bold transition shadow-sm';
+                    confirmBtn.innerText = 'Tak, adoptowany';
+                    iconContainer.className = 'w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-5 bg-purple-100 text-purple-600';
+                    icon.className = 'ph-fill ph-heart text-4xl';
+                } else {
+                    confirmBtn.className = 'w-full bg-gray-800 hover:bg-gray-900 text-white py-3 rounded-xl font-bold transition shadow-sm';
+                    confirmBtn.innerText = 'Tak, zakończ ogłoszenie';
+                    iconContainer.className = 'w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-5 bg-gray-100 text-gray-600';
+                    icon.className = 'ph-fill ph-archive text-4xl';
+                }
+
+                document.getElementById('custom-confirm-modal').classList.remove('hidden');
+                document.getElementById('custom-confirm-modal').classList.add('flex');
+            }
+
+            function closeConfirmModal() {
+                document.getElementById('custom-confirm-modal').classList.add('hidden');
+                document.getElementById('custom-confirm-modal').classList.remove('flex');
+                formToSubmit = null;
+            }
+
+            function executeAction() {
+                if (formToSubmit) {
+                    formToSubmit.submit();
+                }
+            }
+        </script>
+</main>
+</body>
+</html>

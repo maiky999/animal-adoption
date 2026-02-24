@@ -1,0 +1,45 @@
+version: '3.8'
+services:
+  mssql-db:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: animaladoption-mssql
+    ports:
+      - "1433:1433"
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "Your_Strong_Password123!"
+      MSSQL_PID: "Developer"
+    volumes:
+      - mssql-data:/var/opt/mssql
+    # Docker będzie sprawdzał, czy baza wstała i jest gotowa
+    healthcheck:
+      test: ["CMD", "/opt/mssql-tools18/bin/sqlcmd", "-S", "localhost", "-U", "sa", "-P", "Your_Strong_Password123!", "-C", "-Q", "SELECT 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  # Kontener pomocniczy, który utworzy bazę danych i się wyłączy
+  mssql-init:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: animaladoption-mssql-init
+    depends_on:
+      mssql-db:
+        condition: service_healthy
+    command: >
+      /bin/bash -c "
+        /opt/mssql-tools18/bin/sqlcmd -S mssql-db -U sa -P 'Your_Strong_Password123!' -C -Q \"IF NOT EXISTS (SELECT * FROM sys.databases WHERE name = 'animaladoption') BEGIN CREATE DATABASE animaladoption END\"
+      "
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: animaladoption-rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: "admin"
+      RABBITMQ_DEFAULT_PASS: "admin"
+
+volumes:
+  mssql-data:

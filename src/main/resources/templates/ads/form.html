@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="pl" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout/base :: layout(~{::main})}">
+<body>
+<main class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-12 w-full flex-grow">
+
+  <div class="bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
+    <!-- Dynamiczny nagłówek -->
+    <h2 class="text-3xl font-bold text-gray-800 mb-6" th:text="${editMode == true} ? 'Edytuj ogłoszenie' : 'Dodaj nowe ogłoszenie'">Dodaj nowe ogłoszenie</h2>
+
+    <!-- Wyświetlanie błędu przekroczenia rozmiaru plików z backendu -->
+    <div th:if="${errorMessage}" class="bg-red-50 text-red-600 p-4 rounded-xl text-sm mb-6 border border-red-100 flex items-center shadow-sm fade-in">
+      <i class="ph ph-warning-circle text-2xl mr-2"></i>
+      <span th:text="${errorMessage}"></span>
+    </div>
+
+    <!-- Dynamiczna akcja formularza: /ads/new lub /ads/{id}/edit -->
+    <form th:action="${editMode == true} ? @{/ads/{id}/edit(id=${adId})} : @{/ads/new}" th:object="${adCreateDto}" method="post" enctype="multipart/form-data" class="space-y-6">
+
+      <div>
+        <label for="title" class="block text-sm font-medium text-gray-700 mb-1">Tytuł ogłoszenia</label>
+        <input type="text" id="title" th:field="*{title}" placeholder="Np. Uroczy 3-miesięczny kotek szuka domu"
+               class="w-full px-4 py-2 rounded-lg border focus:ring-2 focus:ring-primary focus:border-primary outline-none transition"
+               th:classappend="${#fields.hasErrors('title')} ? 'border-red-500' : 'border-gray-300'">
+        <p th:if="${#fields.hasErrors('title')}" th:errors="*{title}" class="mt-1 text-sm text-red-500"></p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div>
+          <label for="categoryId" class="block text-sm font-medium text-gray-700 mb-1">Kategoria</label>
+          <select id="categoryId" th:field="*{categoryId}"
+                  class="w-full px-4 py-2 rounded-lg border focus:ring-2 focus:ring-primary focus:border-primary outline-none transition"
+                  th:classappend="${#fields.hasErrors('categoryId')} ? 'border-red-500' : 'border-gray-300'">
+            <option value="">Wybierz kategorię</option>
+            <option th:each="cat : ${categories}" th:value="${cat.id}" th:text="${cat.name}"></option>
+          </select>
+          <p th:if="${#fields.hasErrors('categoryId')}" th:errors="*{categoryId}" class="mt-1 text-sm text-red-500"></p>
+        </div>
+
+        <div>
+          <label for="location" class="block text-sm font-medium text-gray-700 mb-1">Lokalizacja (Miejscowość)</label>
+          <input type="text" id="location" th:field="*{location}" placeholder="Np. Warszawa"
+                 class="w-full px-4 py-2 rounded-lg border focus:ring-2 focus:ring-primary focus:border-primary outline-none transition"
+                 th:classappend="${#fields.hasErrors('location')} ? 'border-red-500' : 'border-gray-300'">
+          <p th:if="${#fields.hasErrors('location')}" th:errors="*{location}" class="mt-1 text-sm text-red-500"></p>
+        </div>
+      </div>
+
+      <!-- POLE NA ZDJĘCIA z dynamicznym błędem JS i podglądem -->
+      <div>
+        <label for="imageFiles" class="block text-sm font-medium text-gray-700 mb-1">Zdjęcia zwierzaka (Galeria)</label>
+        <input type="file" id="imageFiles" name="imageFiles" accept="image/*" multiple
+               class="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-primary focus:border-primary outline-none transition file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-orange-50 file:text-primary hover:file:bg-orange-100">
+
+        <!-- Różne instrukcje w zależności od trybu -->
+        <p class="text-xs text-gray-500 mt-1" th:unless="${editMode == true}">Dopuszczalne formaty: JPG, PNG. Zaznacz maks. 10 zdjęć (łącznie do 2MB ze względu na limity serwera).</p>
+        <p class="text-xs text-blue-600 font-medium mt-1" th:if="${editMode == true}">
+          <i class="ph-fill ph-info"></i> Edycja: Zostaw to pole puste, aby zachować obecne zdjęcia. Wybranie nowych zdjęć <b>całkowicie nadpisze</b> starą galerię (limit 2MB łącznie).
+        </p>
+
+        <!-- Zarezerwowane miejsce na komunikat błędu -->
+        <p id="fileSizeError" class="hidden text-red-500 text-sm font-medium mt-2 p-3 bg-red-50 rounded-lg border border-red-100"></p>
+
+        <!-- Dynamiczny podgląd miniatur zdjęć -->
+        <div id="imagePreviewContainer" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 mt-4 empty:hidden"></div>
+      </div>
+
+      <div>
+        <label for="description" class="block text-sm font-medium text-gray-700 mb-1">Opis zwierzaka</label>
+        <textarea id="description" th:field="*{description}" rows="6" placeholder="Opisz charakter, wiek, szczepienia, powód oddania..."
+                  class="w-full px-4 py-2 rounded-lg border focus:ring-2 focus:ring-primary focus:border-primary outline-none transition resize-none"
+                  th:classappend="${#fields.hasErrors('description')} ? 'border-red-500' : 'border-gray-300'"></textarea>
+        <p th:if="${#fields.hasErrors('description')}" th:errors="*{description}" class="mt-1 text-sm text-red-500"></p>
+      </div>
+
+      <div class="pt-4">
+        <!-- Dynamiczny przycisk submit -->
+        <button type="submit" class="w-full bg-primary hover:bg-primaryHover text-white font-bold py-3 px-4 rounded-xl shadow-md transition" th:text="${editMode == true} ? 'Zapisz zmiany' : 'Opublikuj ogłoszenie'">
+          Opublikuj ogłoszenie
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Ulepszona walidacja i podgląd miniatur zdjęć -->
+  <script>
+            const fileInput = document.getElementById('imageFiles');
+            const previewContainer = document.getElementById('imagePreviewContainer');
+            const errorMsg = document.getElementById('fileSizeError');
+            const form = document.querySelector('form');
+
+            // UWAGA: Zmniejszono limit do 2MB, ponieważ serwer odrzuca większe paczki (3.5MB)
+            const SAFE_SINGLE_SIZE = 1 * 1024 * 1024; // 1 MB
+            const SAFE_TOTAL_SIZE = 2 * 1024 * 1024;  // 2 MB (Domyślny limit Tomcata)
+
+            fileInput.addEventListener('change', function() {
+                previewContainer.innerHTML = '';
+                errorMsg.classList.add('hidden');
+                fileInput.classList.remove('border-red-500', 'bg-red-50');
+
+                let totalSize = 0;
+                let hasError = false;
+
+                Array.from(this.files).forEach(file => {
+                    totalSize += file.size;
+                    const isTooBig = file.size > SAFE_SINGLE_SIZE;
+                    if(isTooBig) hasError = true;
+
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        const div = document.createElement('div');
+                        div.className = `relative rounded-xl overflow-hidden border-2 shadow-sm aspect-square group fade-in ${isTooBig ? 'border-red-500' : 'border-gray-200'}`;
+
+                        div.innerHTML = `
+                            <img src="${e.target.result}" class="w-full h-full object-cover" />
+                            <div class="absolute inset-0 bg-black/40 flex flex-col items-center justify-center text-white opacity-0 group-hover:opacity-100 transition duration-200">
+                                <span class="text-sm font-bold">${(file.size / 1024).toFixed(0)} KB</span>
+                            </div>
+                            ${isTooBig ? '<div class="absolute top-1 right-1 bg-red-500 text-white text-xs px-2 py-1 rounded-md font-bold shadow-md"><i class="ph ph-warning-circle"></i> >1MB</div>' : ''}
+                        `;
+                        previewContainer.appendChild(div);
+                    }
+                    reader.readAsDataURL(file);
+                });
+
+                if (totalSize > SAFE_TOTAL_SIZE) {
+                    showError(`Łączny rozmiar zdjęć to ${(totalSize / 1024 / 1024).toFixed(1)}MB. Twój serwer obecnie akceptuje tylko 2MB łącznie.`);
+                } else if (hasError) {
+                    showError('Przynajmniej jedno z wybranych zdjęć przekracza limit 1MB.');
+                }
+            });
+
+            function showError(text) {
+                errorMsg.innerHTML = `<i class="ph ph-warning-circle inline-block align-text-bottom mr-1 text-lg"></i> <strong>Zablokowano:</strong> ${text}`;
+                errorMsg.classList.remove('hidden');
+                fileInput.classList.add('border-red-500', 'bg-red-50');
+            }
+
+            form.addEventListener('submit', function(event) {
+                let totalSize = 0;
+                let hasError = false;
+
+                Array.from(fileInput.files).forEach(f => {
+                    totalSize += f.size;
+                    if(f.size > SAFE_SINGLE_SIZE) hasError = true;
+                });
+
+                if (hasError || totalSize > SAFE_TOTAL_SIZE) {
+                    event.preventDefault();
+                    fileInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            });
+        </script>
+</main>
+</body>
+</html>

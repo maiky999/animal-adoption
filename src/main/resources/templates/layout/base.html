@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="pl" xmlns:th="http://www.thymeleaf.org" th:fragment="layout(content)">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Łapka - Znajdź swojego pupila</title>
+    <!-- Tailwind CSS (via CDN dla środowiska dev) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- HTMX -->
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <!-- Ikony -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: { primary: '#f97316', primaryHover: '#ea580c', background: '#fcfaf8', surface: '#ffffff', textMain: '#292524' }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: theme('colors.background'); color: theme('colors.textMain'); }
+        .fade-in { animation: fadeIn 0.3s ease-in; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col font-sans">
+
+<!-- Wstrzykiwany Navbar -->
+<div th:replace="~{layout/navbar :: navbar}"></div>
+
+<!-- Globalny komunikat o pomyślnym wylogowaniu -->
+<div th:if="${param.logout}" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6 w-full fade-in z-40">
+    <div class="bg-green-50 text-green-700 p-4 rounded-xl text-sm border border-green-200 flex items-center shadow-sm">
+        <i class="ph-fill ph-check-circle text-2xl mr-3"></i>
+        <span class="font-medium">Wylogowano pomyślnie. Do zobaczenia wkrótce!</span>
+    </div>
+</div>
+
+<!-- Główna treść strony wstrzykiwana tutaj -->
+<main class="flex-grow flex flex-col w-full" th:replace="${content}">
+    <!-- Content goes here -->
+</main>
+
+<!-- Kontener na modale (wykorzystywany przez HTMX) -->
+<div id="modal-container"></div>
+
+<footer class="bg-white border-t border-gray-200 mt-auto py-8">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center">
+        <div class="flex items-center mb-4 md:mb-0">
+            <i class="ph-fill ph-paw-print text-2xl text-gray-400 mr-2"></i>
+            <span class="font-bold text-xl text-gray-400">Łapka</span>
+        </div>
+        <div class="text-gray-500 text-sm">
+            &copy; 2026 Łapka. Projekt edukacyjny.
+        </div>
+    </div>
+</footer>
+
+<script>
+        // Funkcja do zamykania modala HTMX
+        function closeModal() {
+            document.getElementById('modal-container').innerHTML = '';
+            document.body.style.overflow = 'auto';
+        }
+        // Nasłuchiwanie na załadowanie modala przez HTMX by zablokować scroll
+        document.body.addEventListener('htmx:afterSwap', function(evt) {
+            if(evt.detail.target.id === 'modal-container' && evt.detail.target.innerHTML.trim() !== '') {
+                document.body.style.overflow = 'hidden';
+            }
+        });
+    </script>
+</body>
+</html>

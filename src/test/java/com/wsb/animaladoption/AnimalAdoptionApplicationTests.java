@@ -1,4 +1,4 @@
-package com.wsb.animal_adoption;
+package com.wsb.animaladoption;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;

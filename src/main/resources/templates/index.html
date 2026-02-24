@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="pl" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout/base :: layout(~{::main})}">
+<body>
+<main>
+    <!-- Hero Section -->
+    <header class="bg-orange-50 py-16 border-b border-orange-100 flex flex-col justify-center">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <h1 class="text-4xl md:text-6xl font-bold mb-6 text-gray-800">Daj im nowy, kochający dom</h1>
+            <p class="text-xl text-gray-600 mb-10 max-w-2xl mx-auto">Przeglądaj tysiące ogłoszeń od fundacji i osób prywatnych. Znajdź przyjaciela na całe życie i zmień jego świat na lepsze.</p>
+
+            <a th:href="@{/ads}" class="inline-block bg-primary hover:bg-primaryHover text-white text-lg px-8 py-4 rounded-full font-bold transition shadow-lg transform hover:-translate-y-1">
+                Przeglądaj ogłoszenia zwierzaków
+            </a>
+        </div>
+    </header>
+
+    <!-- Najnowsze ogłoszenia -->
+    <section class="py-16 bg-background">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-end mb-8">
+                <div>
+                    <h2 class="text-3xl font-bold text-gray-800">Ostatnio dodane</h2>
+                    <p class="text-gray-500 mt-2">Te zwierzaki niedawno rozpoczęły poszukiwania domu.</p>
+                </div>
+                <!-- Przycisk widoczny tylko na większych ekranach -->
+                <a th:href="@{/ads}" class="text-primary hover:text-primaryHover font-medium hidden sm:block transition">Zobacz wszystkie &rarr;</a>
+            </div>
+
+            <!-- Siatka Ogłoszeń -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+
+                <!-- Komunikat, jeśli baza jest zupełnie pusta -->
+                <div th:if="${#lists.isEmpty(latestAds)}" class="col-span-full text-center py-10 bg-white rounded-2xl border border-dashed border-gray-300">
+                    <i class="ph ph-clock-counter-clockwise text-4xl text-gray-300 mb-2"></i>
+                    <p class="text-gray-500 font-medium">Brak nowych ogłoszeń w tej chwili.</p>
+                </div>
+
+                <!-- Pętla po najnowszych ogłoszeniach -->
+                <article th:each="ad : ${latestAds}"
+                         class="bg-surface rounded-2xl shadow-sm hover:shadow-lg transition duration-300 overflow-hidden border border-gray-100 group cursor-pointer relative"
+                         th:hx-get="@{/ads/{id}(id=${ad.id})}"
+                         hx-target="#modal-container"
+                         hx-swap="innerHTML">
+
+                    <div class="relative h-48 overflow-hidden bg-gray-100 flex items-center justify-center">
+
+                        <!-- Pokaż pierwsze zdjęcie z kolekcji jeśli kolekcja nie jest pusta -->
+                        <img th:if="${ad.imageUrls != null and !ad.imageUrls.isEmpty()}"
+                             th:src="${ad.imageUrls[0]}"
+                             alt="Zdjęcie zwierzaka"
+                             class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+
+                        <!-- Placeholder, gdy brak zdjęć -->
+                        <i th:unless="${ad.imageUrls != null and !ad.imageUrls.isEmpty()}" class="ph ph-paw-print text-5xl text-gray-300"></i>
+
+                        <!-- Etykieta kategorii -->
+                        <div class="absolute top-3 left-3 bg-white/90 backdrop-blur-sm px-2 py-1 rounded-md text-xs font-bold text-gray-700 shadow-sm" th:text="${ad.category.name}">
+                            Kategoria
+                        </div>
+
+                        <!-- Etykieta "Nowe" migająca na czerwono -->
+                        <div class="absolute top-3 right-3 bg-red-500 text-white px-2 py-1 rounded-md text-xs font-bold shadow-sm animate-pulse">
+                            Nowe
+                        </div>
+                    </div>
+
+                    <div class="p-5">
+                        <h3 class="text-lg font-bold text-gray-800 mb-1 truncate" th:text="${ad.title}">Tytuł</h3>
+                        <p class="text-sm text-gray-500 mb-3 flex items-center">
+                            <i class="ph ph-map-pin mr-1 text-primary"></i> <span th:text="${ad.location}">Lokalizacja</span>
+                        </p>
+                        <div class="flex items-center justify-between mt-4 pt-4 border-t border-gray-50">
+                            <div class="flex items-center text-xs text-gray-500">
+                                <div class="w-6 h-6 rounded-full bg-orange-100 text-primary flex items-center justify-center mr-2 font-bold uppercase"
+                                     th:text="${#strings.substring(ad.author.displayName,0,1)}">A</div>
+                                <span class="truncate max-w-[100px]" th:text="${ad.author.displayName}">Autor</span>
+                            </div>
+                            <span class="text-xs text-gray-400" th:text="${#temporals.format(ad.createdAt, 'dd.MM')}">Data</span>
+                        </div>
+                    </div>
+                </article>
+            </div>
+
+            <!-- Przycisk "Zobacz wszystkie" na telefony komórkowe -->
+            <div class="mt-8 text-center sm:hidden">
+                <a th:href="@{/ads}" class="inline-block border border-primary text-primary hover:bg-orange-50 px-6 py-2 rounded-full font-medium transition">
+                    Zobacz wszystkie ogłoszenia
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Informacja -->
+    <section class="py-16 bg-white border-t border-gray-100">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid md:grid-cols-3 gap-8 text-center">
+            <div class="p-6">
+                <i class="ph text-5xl ph-magnifying-glass text-primary mb-4"></i>
+                <h3 class="text-xl font-bold mb-2">Znajdź</h3>
+                <p class="text-gray-500">Przeszukuj ogłoszenia z całej Polski według kategorii i lokalizacji.</p>
+            </div>
+            <div class="p-6">
+                <i class="ph text-5xl ph-chat-teardrop-dots text-primary mb-4"></i>
+                <h3 class="text-xl font-bold mb-2">Skontaktuj się</h3>
+                <p class="text-gray-500">Napisz bezpośrednio do fundacji lub obecnego opiekuna przez nasz system.</p>
+            </div>
+            <div class="p-6">
+                <i class="ph text-5xl ph-house-line text-primary mb-4"></i>
+                <h3 class="text-xl font-bold mb-2">Adoptuj</h3>
+                <p class="text-gray-500">Daj zwierzakowi nowy dom i zyskaj najwierniejszego przyjaciela.</p>
+            </div>
+        </div>
+    </section>
+</main>
+</body>
+</html>

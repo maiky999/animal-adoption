@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="pl" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout/base :: layout(~{::main})}">
+<body>
+<main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 w-full flex-grow">
+
+  <div class="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
+    <h2 class="text-3xl font-bold text-gray-800">Tablica ogłoszeń</h2>
+
+    <!-- Filtrowanie po kategoriach -->
+    <form th:action="@{/ads}" method="get" class="flex gap-2">
+      <select name="categoryId" class="border border-gray-300 rounded-lg px-4 py-2 focus:ring-primary focus:border-primary" onchange="this.form.submit()">
+        <option value="">Wszystkie kategorie</option>
+        <option th:each="cat : ${categories}"
+                th:value="${cat.id}"
+                th:text="${cat.name}"
+                th:selected="${param.categoryId != null and param.categoryId.toString() == cat.id.toString()}">
+        </option>
+      </select>
+    </form>
+  </div>
+
+  <!-- Jeśli brak ogłoszeń -->
+  <div th:if="${#lists.isEmpty(ads)}" class="text-center py-20 bg-white rounded-2xl border border-dashed border-gray-300">
+    <i class="ph ph-ghost text-6xl text-gray-300 mb-4"></i>
+    <h3 class="text-xl font-medium text-gray-600">Brak ogłoszeń w tej kategorii</h3>
+    <p class="text-gray-400 mt-2">Zajrzyj tu ponownie później lub dodaj własne ogłoszenie.</p>
+  </div>
+
+  <!-- Siatka Ogłoszeń -->
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6" th:unless="${#lists.isEmpty(ads)}">
+
+    <article th:each="ad : ${ads}"
+             class="bg-surface rounded-2xl shadow-sm hover:shadow-lg transition duration-300 overflow-hidden border border-gray-100 group cursor-pointer"
+             th:hx-get="@{/ads/{id}(id=${ad.id})}"
+             hx-target="#modal-container"
+             hx-swap="innerHTML">
+
+      <div class="relative h-48 overflow-hidden bg-gray-100 flex items-center justify-center">
+
+        <!-- Pokaż pierwsze zdjęcie z kolekcji jeśli kolekcja nie jest pusta -->
+        <img th:if="${ad.imageUrls != null and !ad.imageUrls.isEmpty()}"
+             th:src="${ad.imageUrls[0]}"
+             alt="Zdjęcie zwierzaka"
+             class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+
+        <!-- Placeholder, gdy brak zdjęć -->
+        <i th:unless="${ad.imageUrls != null and !ad.imageUrls.isEmpty()}" class="ph ph-paw-print text-5xl text-gray-300"></i>
+
+        <!-- Placeholder na tag kategorii -->
+        <div class="absolute top-3 left-3 bg-white/90 backdrop-blur-sm px-2 py-1 rounded-md text-xs font-bold text-gray-700 shadow-sm" th:text="${ad.category.name}">
+          Kategoria
+        </div>
+      </div>
+
+      <div class="p-5">
+        <h3 class="text-lg font-bold text-gray-800 mb-1 truncate" th:text="${ad.title}">Tytuł</h3>
+        <p class="text-sm text-gray-500 mb-3 flex items-center">
+          <i class="ph ph-map-pin mr-1 text-primary"></i> <span th:text="${ad.location}">Lokalizacja</span>
+        </p>
+        <div class="flex items-center justify-between mt-4 pt-4 border-t border-gray-50">
+          <div class="flex items-center text-xs text-gray-500">
+            <div class="w-6 h-6 rounded-full bg-orange-100 text-primary flex items-center justify-center mr-2 font-bold uppercase"
+                 th:text="${#strings.substring(ad.author.displayName,0,1)}">A</div>
+            <span class="truncate max-w-[100px]" th:text="${ad.author.displayName}">Autor</span>
+          </div>
+          <span class="text-xs text-gray-400" th:text="${#temporals.format(ad.createdAt, 'dd.MM.yyyy')}">Data</span>
+        </div>
+      </div>
+    </article>
+
+  </div>
+</main>
+</body>
+</html>

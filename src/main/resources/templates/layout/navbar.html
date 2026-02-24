@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<body>
+<nav th:fragment="navbar" class="bg-surface shadow-sm sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex justify-between h-16">
+            <!-- Logo -->
+            <a th:href="@{/}" class="flex items-center cursor-pointer">
+                <i class="ph-fill ph-paw-print text-3xl text-primary mr-2"></i>
+                <span class="font-bold text-2xl tracking-tight text-textMain"><span class="text-primary">Łapka</span></span>
+            </a>
+
+            <!-- Opcje uwierzytelniania / Menu -->
+            <div class="flex items-center space-x-4">
+
+                <a th:href="@{/ads}" class="text-gray-600 hover:text-primary transition font-medium mr-4">
+                    Przeglądaj ogłoszenia
+                </a>
+
+                <!-- Dla niezalogowanych -->
+                <div sec:authorize="!isAuthenticated()" class="flex items-center space-x-4">
+                    <a th:href="@{/login}" class="text-gray-600 hover:text-primary transition font-medium">Zaloguj się</a>
+                    <a th:href="@{/register}" class="bg-gray-100 hover:bg-gray-200 text-gray-800 px-5 py-2 rounded-full font-medium transition">Rejestracja</a>
+                </div>
+
+                <!-- Dla zalogowanych -->
+                <div sec:authorize="isAuthenticated()" class="flex items-center space-x-4">
+                        <span class="text-sm text-gray-500 hidden lg:block">
+                            Witaj, <strong sec:authentication="name" class="text-gray-700"></strong>!
+                        </span>
+
+                    <!-- Link do panelu Moje ogłoszenia -->
+                    <a th:href="@{/my-ads}" class="text-gray-600 hover:text-primary transition font-medium ml-2 mr-2 flex items-center">
+                        <i class="ph ph-list-dashes text-xl mr-1"></i> Moje ogłoszenia
+                    </a>
+
+                    <a th:href="@{/ads/new}" class="bg-primary hover:bg-primaryHover text-white px-5 py-2 rounded-full font-medium transition shadow-sm flex items-center">
+                        <i class="ph ph-plus-circle mr-2 text-lg"></i> Dodaj
+                    </a>
+
+                    <!-- Przycisk Ustawień (Trybik) -->
+                    <a th:href="@{/profile}" class="text-gray-600 hover:text-primary transition ml-2 flex items-center" title="Ustawienia konta">
+                        <i class="ph ph-gear text-2xl"></i>
+                    </a>
+
+                    <form th:action="@{/logout}" method="post" class="m-0 flex items-center">
+                        <button type="submit" class="text-gray-600 hover:text-red-500 transition ml-2 flex items-center" title="Wyloguj">
+                            <i class="ph ph-sign-out text-2xl"></i>
+                        </button>
+                    </form>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</nav>
+</body>
+</html>
