@@ -4,6 +4,17 @@ spring:
     username: sa
     password: Your_Strong_Password123!
     driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: #do zrobienia konto gmail
+    password: #hasło dla apki do smtp
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
 
   sql:
     init:

@@ -7,19 +7,24 @@ import com.wsb.animaladoption.dto.UserRegistrationDto;
 import com.wsb.animaladoption.enums.RoleEnum;
 import com.wsb.animaladoption.event.RegistrationEvent;
 import com.wsb.animaladoption.model.User;
+import com.wsb.animaladoption.model.VerificationToken;
 import com.wsb.animaladoption.repository.UserRepository;
+import com.wsb.animaladoption.repository.VerificationTokenRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
 public class UserService {
     private final UserRepository userRepository;
+    private final VerificationTokenRepository tokenRepository;
     private final PasswordEncoder passwordEncoder;
     private final RabbitTemplate rabbitTemplate;
 
@@ -36,10 +41,31 @@ public class UserService {
         userRepository.save(user);
 
         String token = UUID.randomUUID().toString();
+        VerificationToken verificationToken = new VerificationToken(token, user);
+        tokenRepository.save(verificationToken);
+
         RegistrationEvent event = new RegistrationEvent(user.getEmail(), token);
         rabbitTemplate.convertAndSend(RabbitMQConfig.EXCHANGE_EMAIL, RabbitMQConfig.ROUTING_KEY_REGISTRATION, event);
 
         return user;
+    }
+
+    @Transactional
+    public boolean verifyEmail(String token) {
+        Optional<VerificationToken> tokenOptional = tokenRepository.findByToken(token);
+
+        if (tokenOptional.isPresent()) {
+            VerificationToken verificationToken = tokenOptional.get();
+            if (verificationToken.getExpiryDate().isAfter(LocalDateTime.now())) {
+                User user = verificationToken.getUser();
+                user.setEmailVerified(true);
+                userRepository.save(user);
+
+                tokenRepository.delete(verificationToken);
+                return true;
+            }
+        }
+        return false;
     }
 
     @Transactional

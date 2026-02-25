@@ -11,6 +11,8 @@ import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 @Controller
 @RequiredArgsConstructor
@@ -26,6 +28,19 @@ public class AuthController {
     public String showRegistrationForm(Model model) {
         model.addAttribute("userRegistrationDto", new UserRegistrationDto());
         return "user/register";
+    }
+
+    @GetMapping("/verify")
+    public String verifyEmail(@RequestParam("token") String token, RedirectAttributes redirectAttributes) {
+        boolean isVerified = userService.verifyEmail(token);
+
+        if (isVerified) {
+            redirectAttributes.addFlashAttribute("successMessage", "Twój adres e-mail został pomyślnie zweryfikowany! Możesz się teraz zalogować.");
+        } else {
+            redirectAttributes.addFlashAttribute("errorMessage", "Link weryfikacyjny jest nieprawidłowy lub wygasł.");
+        }
+
+        return "redirect:/login";
     }
 
     @PostMapping("/register")
