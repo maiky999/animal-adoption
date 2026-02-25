@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="pl" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout/base :: layout(~{::main})}">
+<body>
+<main class="flex-grow flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-orange-50/50">
+  <div class="max-w-md w-full bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
+
+    <div class="text-center mb-8">
+      <h2 class="text-3xl font-bold text-gray-900">Rejestracja</h2>
+      <p class="text-sm text-gray-500 mt-2">Dołącz do społeczności Łapki!</p>
+    </div>
+
+    <!-- Formularz będzie wysyłał zapytanie do AuthController  -->
+    <form th:action="@{/register}" th:object="${userRegistrationDto}" method="post" class="space-y-4">
+
+      <div>
+        <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Adres email</label>
+        <input type="email" id="email" th:field="*{email}" required
+               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary outline-none transition">
+        <!-- Wyświetlanie błędu walidacji (jeśli AuthController je złapie z BindingResult) -->
+        <p th:if="${#fields.hasErrors('email')}" th:errors="*{email}" class="text-red-500 text-xs mt-1"></p>
+      </div>
+
+      <div>
+        <label for="displayName" class="block text-sm font-medium text-gray-700 mb-1">Nazwa wyświetlana (np. Jan Kowalski, Fundacja Azyl)</label>
+        <input type="text" id="displayName" th:field="*{displayName}" required
+               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary outline-none transition">
+        <p th:if="${#fields.hasErrors('displayName')}" th:errors="*{displayName}" class="text-red-500 text-xs mt-1"></p>
+      </div>
+
+      <div>
+        <label for="mobile" class="block text-sm font-medium text-gray-700 mb-1">Telefon kontaktowy (9 cyfr)</label>
+        <input type="text" id="mobile" th:field="*{mobile}" required pattern="\d{9}" title="Wpisz dokładnie 9 cyfr"
+               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary outline-none transition">
+        <p th:if="${#fields.hasErrors('mobile')}" th:errors="*{mobile}" class="text-red-500 text-xs mt-1"></p>
+      </div>
+
+      <div>
+        <label for="password" class="block text-sm font-medium text-gray-700 mb-1">Hasło</label>
+        <input type="password" id="password" th:field="*{password}" required minlength="8"
+               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary outline-none transition">
+        <p th:if="${#fields.hasErrors('password')}" th:errors="*{password}" class="text-red-500 text-xs mt-1"></p>
+      </div>
+
+      <div class="pt-4">
+        <button type="submit" class="w-full flex justify-center py-3 border border-transparent rounded-xl shadow-sm text-sm font-bold text-white bg-gray-800 hover:bg-gray-900 transition focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-900">
+          Załóż konto
+        </button>
+      </div>
+    </form>
+
+    <div class="mt-6 text-center text-sm">
+      <span class="text-gray-500">Masz już konto?</span>
+      <a th:href="@{/login}" class="font-medium text-primary hover:text-primaryHover">Zaloguj się</a>
+    </div>
+  </div>
+</main>
+</body>
+</html>

@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="pl" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout/base :: layout(~{::main})}">
+<body>
+<main class="max-w-md mx-auto px-4 py-16 w-full flex-grow">
+
+  <div class="bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
+    <div class="text-center mb-8">
+      <i class="ph-fill ph-paw-print text-4xl text-primary mb-2"></i>
+      <h2 class="text-3xl font-bold text-gray-800">Witaj ponownie</h2>
+      <p class="text-gray-500 mt-2">Zaloguj się do swojego konta</p>
+    </div>
+
+    <!-- Komunikaty sukcesu z atrybutów Flash (np. po pomyślnej weryfikacji linkiem) -->
+    <div th:if="${successMessage}" class="bg-green-50 text-green-700 p-4 rounded-xl text-sm mb-6 border border-green-200 flex items-center shadow-sm fade-in">
+      <i class="ph-fill ph-check-circle text-2xl mr-2"></i>
+      <span th:text="${successMessage}"></span>
+    </div>
+
+    <!-- NOWOŚĆ: Komunikat po udanej rejestracji (nasłuchuje na parametr ?success w URL) -->
+    <div th:if="${param.success}" class="bg-green-50 text-green-700 p-4 rounded-xl text-sm mb-6 border border-green-200 flex items-start shadow-sm fade-in">
+      <i class="ph-fill ph-envelope-open text-2xl mr-3 mt-0.5"></i>
+      <div>
+        <strong>Rejestracja zakończona sukcesem!</strong><br>
+        <span>Wysłaliśmy link aktywacyjny na Twój adres e-mail. Sprawdź swoją skrzynkę (oraz folder SPAM), aby aktywować konto.</span>
+      </div>
+    </div>
+
+    <!-- Komunikaty błędu (np. wygasły/zużyty link weryfikacyjny) -->
+    <div th:if="${errorMessage}" class="bg-red-50 text-red-600 p-4 rounded-xl text-sm mb-6 border border-red-100 flex items-center shadow-sm fade-in">
+      <i class="ph-fill ph-x-circle text-2xl mr-2"></i>
+      <span th:text="${errorMessage}"></span>
+    </div>
+
+    <!-- Standardowy błąd logowania (Złe hasło / Brak użytkownika) -->
+    <div th:if="${param.error} and (${session['SPRING_SECURITY_LAST_EXCEPTION']} == null or !${#strings.contains(session['SPRING_SECURITY_LAST_EXCEPTION'].toString(), 'DisabledException')})"
+         class="bg-red-50 text-red-600 p-4 rounded-xl text-sm mb-6 border border-red-100 flex items-center shadow-sm fade-in">
+      <i class="ph ph-warning-circle text-2xl mr-2"></i>
+      <span>Nieprawidłowy adres email lub hasło.</span>
+    </div>
+
+    <!-- Specjalny błąd dla konta niezweryfikowanego -->
+    <div th:if="${param.error} and ${session['SPRING_SECURITY_LAST_EXCEPTION']} != null and ${#strings.contains(session['SPRING_SECURITY_LAST_EXCEPTION'].toString(), 'DisabledException')}"
+         class="bg-amber-50 text-amber-700 p-4 rounded-xl text-sm mb-6 border border-amber-200 flex items-start shadow-sm fade-in">
+      <i class="ph-fill ph-warning text-2xl mr-2 mt-0.5"></i>
+      <div>
+        <strong>Konto nieaktywne!</strong><br>
+        <span>Twój adres e-mail nie został jeszcze potwierdzony. Sprawdź swoją skrzynkę odbiorczą (również folder SPAM) i kliknij w link aktywacyjny.</span>
+      </div>
+    </div>
+
+    <form th:action="@{/login}" method="post" class="space-y-5">
+
+      <div>
+        <label for="username" class="block text-sm font-medium text-gray-700 mb-1">Adres email</label>
+        <div class="relative">
+          <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+            <i class="ph ph-envelope-simple text-lg"></i>
+          </div>
+          <input type="email" id="username" name="username" required placeholder="np. jan@kowalski.pl"
+                 class="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-primary focus:border-primary outline-none transition bg-gray-50 focus:bg-white">
+        </div>
+      </div>
+
+      <div>
+        <label for="password" class="block text-sm font-medium text-gray-700 mb-1 flex justify-between">
+          <span>Hasło</span>
+          <a href="#" class="text-primary hover:text-primaryHover font-bold text-xs transition">Zapomniałeś hasła?</a>
+        </label>
+        <div class="relative">
+          <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+            <i class="ph ph-lock-key text-lg"></i>
+          </div>
+          <input type="password" id="password" name="password" required placeholder="••••••••"
+                 class="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-primary focus:border-primary outline-none transition bg-gray-50 focus:bg-white">
+        </div>
+      </div>
+
+      <div class="pt-2">
+        <button type="submit" class="w-full bg-primary hover:bg-primaryHover text-white font-bold py-3 px-4 rounded-xl shadow-md transition flex items-center justify-center">
+          Zaloguj się <i class="ph ph-sign-in ml-2 text-xl"></i>
+        </button>
+      </div>
+    </form>
+
+    <div class="mt-6 text-center text-sm text-gray-600">
+      Nie masz jeszcze konta?
+      <a th:href="@{/register}" class="text-primary hover:text-primaryHover font-bold transition">Zarejestruj się bezpłatnie</a>
+    </div>
+
+  </div>
+</main>
+</body>
+</html>

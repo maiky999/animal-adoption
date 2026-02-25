@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<!-- Ten fragment (th:fragment="content") jest wstrzykiwany przez HTMX do #modal-container -->
+<div th:fragment="content" class="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 md:p-10 fade-in" onclick="if(event.target === this) closeModal()">
+
+  <div class="bg-white rounded-2xl w-full max-w-5xl max-h-full overflow-hidden flex flex-col md:flex-row relative shadow-2xl">
+
+    <!-- Przycisk zamykania -->
+    <button onclick="closeModal()" class="absolute top-4 right-4 bg-white/80 backdrop-blur-md rounded-full p-2 text-gray-600 hover:text-black hover:bg-white z-50 shadow-sm transition">
+      <i class="ph ph-x text-xl"></i>
+    </button>
+
+    <!-- Sekcja Galerii Zdjęć (Lewa strona) -->
+    <!-- Zmiana z overflow-y-auto na overflow-hidden aby przygotować miejsce na slider -->
+    <div class="md:w-1/2 bg-gray-100 relative h-[40vh] md:h-auto overflow-hidden border-b md:border-b-0 md:border-r border-gray-200">
+
+      <!-- Dokładnie JEDNO zdjęcie -->
+      <div th:if="${#lists.size(ad.imageUrls) == 1}" class="absolute inset-0 w-full h-full">
+        <img th:src="${ad.imageUrls[0]}" alt="Zdjęcie zwierzaka" class="w-full h-full object-cover">
+      </div>
+
+      <!-- Wiele zdjęć (Karuzela / Slider) -->
+      <div th:if="${#lists.size(ad.imageUrls) > 1}" class="absolute inset-0 w-full h-full group">
+
+        <!-- Kontener przewijany ze zdjęciami -->
+        <div id="carousel-inner" class="flex w-full h-full transition-transform duration-500 ease-in-out cursor-grab active:cursor-grabbing" style="transform: translateX(0%);">
+          <div th:each="imgUrl : ${ad.imageUrls}" class="w-full h-full flex-shrink-0 relative">
+            <img th:src="${imgUrl}" alt="Zdjęcie z galerii" class="w-full h-full object-cover">
+          </div>
+        </div>
+
+        <!-- Przyciski nawigacji (Widoczne tylko po najechaniu lub na mobilnych) -->
+        <button type="button" onclick="prevSlide(event)" class="absolute left-4 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white text-gray-800 p-2 rounded-full shadow-md opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity z-10">
+          <i class="ph ph-caret-left text-2xl"></i>
+        </button>
+        <button type="button" onclick="nextSlide(event)" class="absolute right-4 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white text-gray-800 p-2 rounded-full shadow-md opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity z-10">
+          <i class="ph ph-caret-right text-2xl"></i>
+        </button>
+
+        <!-- Wskaźniki (kropki na dole) -->
+        <div class="absolute bottom-4 left-1/2 -translate-x-1/2 flex space-x-2 z-10 bg-black/30 px-3 py-2 rounded-full backdrop-blur-sm">
+          <button type="button" th:each="imgUrl, stat : ${ad.imageUrls}"
+                  th:onclick="'goToSlide(event, ' + ${stat.index} + ')'"
+                  class="w-2 h-2 rounded-full transition-all duration-300 carousel-dot"
+                  th:classappend="${stat.index == 0} ? 'bg-white scale-125' : 'bg-white/50 hover:bg-white/80'">
+          </button>
+        </div>
+
+        <!-- Skrypt Karuzeli (Uruchamiany po wstrzyknięciu przez HTMX) -->
+        <script th:inline="javascript">
+                        (function() {
+                            const totalSlides = /*[[${#lists.size(ad.imageUrls)}]]*/ 0;
+                            window.currentCarouselIndex = 0;
+
+                            window.prevSlide = function(e) {
+                                if(e) e.stopPropagation();
+                                window.currentCarouselIndex = (window.currentCarouselIndex === 0) ? totalSlides - 1 : window.currentCarouselIndex - 1;
+                                updateCarousel();
+                            };
+
+                            window.nextSlide = function(e) {
+                                if(e) e.stopPropagation();
+                                window.currentCarouselIndex = (window.currentCarouselIndex === totalSlides - 1) ? 0 : window.currentCarouselIndex + 1;
+                                updateCarousel();
+                            };
+
+                            window.goToSlide = function(e, index) {
+                                if(e) e.stopPropagation();
+                                window.currentCarouselIndex = index;
+                                updateCarousel();
+                            };
+
+                            function updateCarousel() {
+                                const inner = document.getElementById('carousel-inner');
+                                if(inner) {
+                                    inner.style.transform = `translateX(-${window.currentCarouselIndex * 100}%)`;
+                                }
+
+                                const dots = document.querySelectorAll('.carousel-dot');
+                                dots.forEach((dot, index) => {
+                                    if(index === window.currentCarouselIndex) {
+                                        dot.classList.remove('bg-white/50', 'hover:bg-white/80');
+                                        dot.classList.add('bg-white', 'scale-125');
+                                    } else {
+                                        dot.classList.remove('bg-white', 'scale-125');
+                                        dot.classList.add('bg-white/50', 'hover:bg-white/80');
+                                    }
+                                });
+                            }
+
+                            // Obsługa gestów przesunięcia (Swipe) dla urządzeń mobilnych
+                            const inner = document.getElementById('carousel-inner');
+                            let startX = 0;
+                            let endX = 0;
+
+                            if(inner) {
+                                inner.addEventListener('touchstart', e => {
+                                    startX = e.changedTouches[0].screenX;
+                                }, {passive: true});
+
+                                inner.addEventListener('touchend', e => {
+                                    endX = e.changedTouches[0].screenX;
+                                    handleSwipe();
+                                }, {passive: true});
+                            }
+
+                            function handleSwipe() {
+                                // Margines błędu przesunięcia (50px)
+                                if (startX - endX > 50) {
+                                    window.nextSlide(); // Przesunięcie w lewo (następne zdjęcie)
+                                }
+                                if (endX - startX > 50) {
+                                    window.prevSlide(); // Przesunięcie w prawo (poprzednie zdjęcie)
+                                }
+                            }
+                        })();
+                    </script>
+      </div>
+
+      <!-- Brak zdjęć (Placeholder) -->
+      <div th:if="${#lists.isEmpty(ad.imageUrls)}" class="absolute inset-0 flex flex-col items-center justify-center text-gray-300">
+        <i class="ph ph-paw-print text-8xl mb-4"></i>
+        <p class="font-medium">Brak zdjęć</p>
+      </div>
+
+    </div>
+
+    <!-- Treść Ogłoszenia (Prawa strona) -->
+    <div class="md:w-1/2 flex flex-col h-[60vh] md:h-auto">
+
+      <!-- Przewijana zawartość opisu -->
+      <div class="p-8 flex-grow overflow-y-auto">
+        <div class="mb-3 flex flex-wrap items-center justify-between gap-2 pr-12">
+          <span class="bg-orange-100 text-primary text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider" th:text="${ad.category.name}">Kategoria</span>
+          <span class="text-gray-400 text-sm font-medium whitespace-nowrap" th:text="${#temporals.format(ad.createdAt, 'dd.MM.yyyy')}">Data</span>
+        </div>
+
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-4 leading-tight pr-8" th:text="${ad.title}">Tytuł ogłoszenia</h2>
+
+        <p class="text-gray-600 mb-6 flex items-center font-medium">
+          <i class="ph-fill ph-map-pin mr-2 text-primary text-xl"></i>
+          <span th:text="${ad.location}">Lokalizacja</span>
+        </p>
+
+        <h3 class="text-sm font-bold text-gray-400 uppercase tracking-wider mb-2">Opis zwierzaka</h3>
+        <div class="prose text-gray-700 leading-relaxed whitespace-pre-wrap" th:text="${ad.description}">
+          Opis...
+        </div>
+      </div>
+
+      <!-- Stopka z profilem i akcjami -->
+      <div class="p-6 bg-gray-50 border-t border-gray-100">
+        <div class="flex items-center justify-between mb-5">
+          <div class="flex items-center">
+            <div class="w-12 h-12 rounded-full bg-orange-100 text-primary flex items-center justify-center font-bold text-xl mr-3 shadow-sm uppercase"
+                 th:text="${#strings.substring(ad.author.displayName,0,1)}">A</div>
+            <div>
+              <p class="font-bold text-gray-800" th:text="${ad.author.displayName}">Nazwa Autora</p>
+              <p class="text-xs text-gray-500">Obecny opiekun</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Jeśli to NIE jest ogłoszenie zalogowanego użytkownika (lub użytkownik nie jest zalogowany) -->
+        <div th:unless="${#authorization.expression('isAuthenticated()') and #authentication.name == ad.author.email}" class="flex space-x-3">
+          <button class="flex-1 bg-primary hover:bg-primaryHover text-white py-3 px-4 rounded-xl font-bold transition shadow-md flex justify-center items-center">
+            <i class="ph ph-chat-teardrop-dots text-xl mr-2"></i>
+            Napisz wiadomość
+          </button>
+
+          <a th:if="${ad.author.mobile != null}" th:href="'tel:' + ${ad.author.mobile}" class="bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 p-3 w-14 rounded-xl transition shadow-sm flex items-center justify-center" title="Zadzwoń">
+            <i class="ph ph-phone text-2xl text-primary"></i>
+          </a>
+        </div>
+
+        <!-- Jeśli to JEST ogłoszenie zalogowanego użytkownika (podgląd) -->
+        <div th:if="${#authorization.expression('isAuthenticated()') and #authentication.name == ad.author.email}">
+          <div class="w-full bg-gray-200/50 text-gray-500 py-3 px-4 rounded-xl font-medium flex items-center justify-center border border-gray-200">
+            <i class="ph ph-info text-xl mr-2"></i> To jest podgląd Twojego ogłoszenia
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+</div>
+</body>
+</html>
