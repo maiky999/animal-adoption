@@ -36,6 +36,11 @@ public class User {
 
     private boolean isEmailVerified = false;
 
+    @Column(columnDefinition = "TEXT")
+    private String description;
+
+    private String avatarUrl;
+
     @CreationTimestamp
     private LocalDateTime createdAt;
 

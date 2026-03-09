@@ -27,6 +27,7 @@ public class UserService {
     private final VerificationTokenRepository tokenRepository;
     private final PasswordEncoder passwordEncoder;
     private final RabbitTemplate rabbitTemplate;
+    private final FileStorageService fileStorageService;
 
     @Transactional
     public User registerNewUser(UserRegistrationDto dto) {
@@ -82,6 +83,17 @@ public class UserService {
 
         user.setDisplayName(dto.getDisplayName());
         user.setMobile(dto.getMobile());
+        user.setDescription(dto.getDescription());
+
+        if (dto.getAvatarFile() != null && !dto.getAvatarFile().isEmpty()) {
+            if (user.getAvatarUrl() != null) {
+                fileStorageService.deleteFile(user.getAvatarUrl());
+            }
+
+            String avatarPath = fileStorageService.storeFile(dto.getAvatarFile());
+            user.setAvatarUrl(avatarPath);
+        }
+
         userRepository.save(user);
     }
 

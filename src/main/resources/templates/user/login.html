@@ -16,7 +16,7 @@
       <span th:text="${successMessage}"></span>
     </div>
 
-    <!-- NOWOŚĆ: Komunikat po udanej rejestracji (nasłuchuje na parametr ?success w URL) -->
+    <!-- Komunikat po udanej rejestracji (nasłuchuje na parametr ?success w URL) -->
     <div th:if="${param.success}" class="bg-green-50 text-green-700 p-4 rounded-xl text-sm mb-6 border border-green-200 flex items-start shadow-sm fade-in">
       <i class="ph-fill ph-envelope-open text-2xl mr-3 mt-0.5"></i>
       <div>
@@ -62,10 +62,7 @@
       </div>
 
       <div>
-        <label for="password" class="block text-sm font-medium text-gray-700 mb-1 flex justify-between">
-          <span>Hasło</span>
-          <a href="#" class="text-primary hover:text-primaryHover font-bold text-xs transition">Zapomniałeś hasła?</a>
-        </label>
+        <label for="password" class="block text-sm font-medium text-gray-700 mb-1">Hasło</label>
         <div class="relative">
           <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
             <i class="ph ph-lock-key text-lg"></i>
@@ -73,6 +70,18 @@
           <input type="password" id="password" name="password" required placeholder="••••••••"
                  class="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-primary focus:border-primary outline-none transition bg-gray-50 focus:bg-white">
         </div>
+      </div>
+
+      <!-- NOWOŚĆ: Checkbox Zapamiętaj mnie + Link Zapomniałeś hasła -->
+      <div class="flex items-center justify-between pt-1 pb-1">
+        <label for="remember-me" class="flex items-center cursor-pointer group">
+          <!-- name="remember-me" to klucz do działania ze Spring Security! -->
+          <input type="checkbox" id="remember-me" name="remember-me"
+                 class="w-4 h-4 text-primary bg-gray-100 border-gray-300 rounded focus:ring-primary focus:ring-2 cursor-pointer transition">
+          <span class="ml-2 text-sm text-gray-600 group-hover:text-gray-800 transition">Zapamiętaj mnie</span>
+        </label>
+
+        <a href="#" class="text-primary hover:text-primaryHover font-bold text-sm transition">Zapomniałeś hasła?</a>
       </div>
 
       <div class="pt-2">

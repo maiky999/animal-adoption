@@ -35,6 +35,7 @@ public class ProfileController {
             profileDto.setEmail(user.getEmail());
             profileDto.setDisplayName(user.getDisplayName());
             profileDto.setMobile(user.getMobile());
+            profileDto.setDescription(user.getDescription());
             model.addAttribute("profileDto", profileDto);
         }
 
