@@ -1,5 +1,6 @@
 package com.wsb.animaladoption.service;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -14,6 +15,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 public class FileStorageService {
 
@@ -21,7 +23,7 @@ public class FileStorageService {
     private String uploadDir;
 
     public String storeFile(MultipartFile file) {
-        if  (file == null || file.isEmpty()) {
+        if (file == null || file.isEmpty()) {
             return null;
         }
 
@@ -34,6 +36,24 @@ public class FileStorageService {
             return "/uploads/" + filename;
         } catch (IOException e) {
             throw new RuntimeException("Nie udało się zapisać pliku " + file.getOriginalFilename(), e);
+        }
+    }
+
+    public void deleteFile(String fileUrl) {
+        if (fileUrl == null || fileUrl.trim().isEmpty()) {
+            return;
+        }
+
+        try {
+            String fileName = fileUrl.substring(fileUrl.lastIndexOf("/") + 1);
+            Path filePath = Paths.get(uploadDir).toAbsolutePath().normalize().resolve(fileName);
+
+            boolean deleted = Files.deleteIfExists(filePath);
+            if (deleted) {
+                log.info("Usunięto stary plik: %s".formatted(fileName));
+            }
+        } catch (IOException e) {
+            log.error("Nie udało się usunąć pliku: %s".formatted(fileUrl));
         }
     }
 

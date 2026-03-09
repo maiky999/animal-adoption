@@ -5,6 +5,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
+import org.springframework.web.multipart.MultipartFile;
 
 @Data
 public class UserProfileUpdateDto {
@@ -19,4 +20,9 @@ public class UserProfileUpdateDto {
     @NotBlank(message = "Numer telefonu jest wymagany")
     @Pattern(regexp = "^\\d{9}$", message = "Numer telefonu musi składać się dokładnie z 9 cyfr")
     private String mobile;
+
+    @Size(max = 500, message = "Opis może zawierać maksymalnie 500 znaków")
+    private String description;
+
+    private MultipartFile avatarFile;
 }

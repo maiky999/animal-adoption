@@ -88,6 +88,10 @@ public class AdService {
 
         adRepository.save(ad);
     }
+    @Transactional
+    public List<Ad> findActiveAdsByUserId(Long userId) {
+        return adRepository.findAllByAuthorIdAndStatusOrderByCreatedAtDesc(userId, AdStatusEnum.ACTIVE);
+    }
 
 
 }

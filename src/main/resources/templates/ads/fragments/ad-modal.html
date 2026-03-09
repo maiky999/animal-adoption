@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <body>
-<!-- Ten fragment (th:fragment="content") jest wstrzykiwany przez HTMX do #modal-container -->
 <div th:fragment="content" class="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 md:p-10 fade-in" onclick="if(event.target === this) closeModal()">
 
   <div class="bg-white rounded-2xl w-full max-w-5xl max-h-full overflow-hidden flex flex-col md:flex-row relative shadow-2xl">
@@ -11,26 +10,22 @@
       <i class="ph ph-x text-xl"></i>
     </button>
 
-    <!-- Sekcja Galerii Zdjęć (Lewa strona) -->
-    <!-- Zmiana z overflow-y-auto na overflow-hidden aby przygotować miejsce na slider -->
+    <!-- Sekcja Galerii Zdjęć -->
     <div class="md:w-1/2 bg-gray-100 relative h-[40vh] md:h-auto overflow-hidden border-b md:border-b-0 md:border-r border-gray-200">
 
-      <!-- Dokładnie JEDNO zdjęcie -->
+      <!-- JEDNO zdjęcie -->
       <div th:if="${#lists.size(ad.imageUrls) == 1}" class="absolute inset-0 w-full h-full">
         <img th:src="${ad.imageUrls[0]}" alt="Zdjęcie zwierzaka" class="w-full h-full object-cover">
       </div>
 
-      <!-- Wiele zdjęć (Karuzela / Slider) -->
+      <!-- Wiele zdjęć (Karuzela) -->
       <div th:if="${#lists.size(ad.imageUrls) > 1}" class="absolute inset-0 w-full h-full group">
-
-        <!-- Kontener przewijany ze zdjęciami -->
         <div id="carousel-inner" class="flex w-full h-full transition-transform duration-500 ease-in-out cursor-grab active:cursor-grabbing" style="transform: translateX(0%);">
           <div th:each="imgUrl : ${ad.imageUrls}" class="w-full h-full flex-shrink-0 relative">
             <img th:src="${imgUrl}" alt="Zdjęcie z galerii" class="w-full h-full object-cover">
           </div>
         </div>
 
-        <!-- Przyciski nawigacji (Widoczne tylko po najechaniu lub na mobilnych) -->
         <button type="button" onclick="prevSlide(event)" class="absolute left-4 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white text-gray-800 p-2 rounded-full shadow-md opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity z-10">
           <i class="ph ph-caret-left text-2xl"></i>
         </button>
@@ -38,7 +33,6 @@
           <i class="ph ph-caret-right text-2xl"></i>
         </button>
 
-        <!-- Wskaźniki (kropki na dole) -->
         <div class="absolute bottom-4 left-1/2 -translate-x-1/2 flex space-x-2 z-10 bg-black/30 px-3 py-2 rounded-full backdrop-blur-sm">
           <button type="button" th:each="imgUrl, stat : ${ad.imageUrls}"
                   th:onclick="'goToSlide(event, ' + ${stat.index} + ')'"
@@ -47,7 +41,6 @@
           </button>
         </div>
 
-        <!-- Skrypt Karuzeli (Uruchamiany po wstrzyknięciu przez HTMX) -->
         <script th:inline="javascript">
                         (function() {
                             const totalSlides = /*[[${#lists.size(ad.imageUrls)}]]*/ 0;
@@ -89,7 +82,6 @@
                                 });
                             }
 
-                            // Obsługa gestów przesunięcia (Swipe) dla urządzeń mobilnych
                             const inner = document.getElementById('carousel-inner');
                             let startX = 0;
                             let endX = 0;
@@ -106,30 +98,22 @@
                             }
 
                             function handleSwipe() {
-                                // Margines błędu przesunięcia (50px)
-                                if (startX - endX > 50) {
-                                    window.nextSlide(); // Przesunięcie w lewo (następne zdjęcie)
-                                }
-                                if (endX - startX > 50) {
-                                    window.prevSlide(); // Przesunięcie w prawo (poprzednie zdjęcie)
-                                }
+                                if (startX - endX > 50) window.nextSlide();
+                                if (endX - startX > 50) window.prevSlide();
                             }
                         })();
                     </script>
       </div>
 
-      <!-- Brak zdjęć (Placeholder) -->
+      <!-- Brak zdjęć -->
       <div th:if="${#lists.isEmpty(ad.imageUrls)}" class="absolute inset-0 flex flex-col items-center justify-center text-gray-300">
         <i class="ph ph-paw-print text-8xl mb-4"></i>
         <p class="font-medium">Brak zdjęć</p>
       </div>
-
     </div>
 
-    <!-- Treść Ogłoszenia (Prawa strona) -->
+    <!-- Treść Ogłoszenia -->
     <div class="md:w-1/2 flex flex-col h-[60vh] md:h-auto">
-
-      <!-- Przewijana zawartość opisu -->
       <div class="p-8 flex-grow overflow-y-auto">
         <div class="mb-3 flex flex-wrap items-center justify-between gap-2 pr-12">
           <span class="bg-orange-100 text-primary text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider" th:text="${ad.category.name}">Kategoria</span>
@@ -149,20 +133,25 @@
         </div>
       </div>
 
-      <!-- Stopka z profilem i akcjami -->
-      <div class="p-6 bg-gray-50 border-t border-gray-100">
+      <!-- Stopka z profilem (OBSŁUGA AWATARA) -->
+      <div class="px-8 py-6 bg-gray-50 border-t border-gray-100">
         <div class="flex items-center justify-between mb-5">
           <div class="flex items-center">
-            <div class="w-12 h-12 rounded-full bg-orange-100 text-primary flex items-center justify-center font-bold text-xl mr-3 shadow-sm uppercase"
-                 th:text="${#strings.substring(ad.author.displayName,0,1)}">A</div>
-            <div>
-              <p class="font-bold text-gray-800" th:text="${ad.author.displayName}">Nazwa Autora</p>
-              <p class="text-xs text-gray-500">Obecny opiekun</p>
-            </div>
+            <a th:href="@{/users/{id}(id=${ad.author.id})}" class="flex items-center group cursor-pointer transition">
+
+              <div class="w-12 h-12 rounded-full bg-orange-100 text-primary flex items-center justify-center font-bold text-xl mr-3 shadow-sm uppercase group-hover:bg-primary group-hover:text-white transition-colors overflow-hidden">
+                <img th:if="${ad.author.avatarUrl != null}" th:src="${ad.author.avatarUrl}" alt="Avatar" class="w-full h-full object-cover">
+                <span th:unless="${ad.author.avatarUrl != null}" th:text="${#strings.substring(ad.author.displayName,0,1)}">A</span>
+              </div>
+
+              <div>
+                <p class="font-bold text-gray-800 group-hover:text-primary transition-colors" th:text="${ad.author.displayName}">Nazwa Autora</p>
+                <p class="text-xs text-gray-500">Zobacz profil</p>
+              </div>
+            </a>
           </div>
         </div>
 
-        <!-- Jeśli to NIE jest ogłoszenie zalogowanego użytkownika (lub użytkownik nie jest zalogowany) -->
         <div th:unless="${#authorization.expression('isAuthenticated()') and #authentication.name == ad.author.email}" class="flex space-x-3">
           <button class="flex-1 bg-primary hover:bg-primaryHover text-white py-3 px-4 rounded-xl font-bold transition shadow-md flex justify-center items-center">
             <i class="ph ph-chat-teardrop-dots text-xl mr-2"></i>
@@ -174,7 +163,6 @@
           </a>
         </div>
 
-        <!-- Jeśli to JEST ogłoszenie zalogowanego użytkownika (podgląd) -->
         <div th:if="${#authorization.expression('isAuthenticated()') and #authentication.name == ad.author.email}">
           <div class="w-full bg-gray-200/50 text-gray-500 py-3 px-4 rounded-xl font-medium flex items-center justify-center border border-gray-200">
             <i class="ph ph-info text-xl mr-2"></i> To jest podgląd Twojego ogłoszenia
@@ -182,7 +170,6 @@
         </div>
 
       </div>
-
     </div>
   </div>
 </div>

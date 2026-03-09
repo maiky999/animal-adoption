@@ -12,4 +12,6 @@ public interface AdRepository extends JpaRepository<Ad, Long> {
     List<Ad> findAllByStatusOrderByCreatedAtDesc(AdStatusEnum adStatusEnum);
     List<Ad> findAllByCategoryIdAndStatusOrderByCreatedAtDesc(Long categoryId, AdStatusEnum adStatusEnum);
     List<Ad> findAllByAuthorEmailOrderByCreatedAtDesc(String email);
+
+    List<Ad> findAllByAuthorIdAndStatusOrderByCreatedAtDesc(Long authorId, AdStatusEnum statusEnum);
 }
