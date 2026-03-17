@@ -1,3 +1,4 @@
+<!-- Ten sam plik co dotychczas, zaktualizowany został tylko przycisk "Napisz wiadomość" -->
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <body>
@@ -133,17 +134,15 @@
         </div>
       </div>
 
-      <!-- Stopka z profilem (OBSŁUGA AWATARA) -->
+      <!-- Stopka z profilem -->
       <div class="px-8 py-6 bg-gray-50 border-t border-gray-100">
         <div class="flex items-center justify-between mb-5">
           <div class="flex items-center">
             <a th:href="@{/users/{id}(id=${ad.author.id})}" class="flex items-center group cursor-pointer transition">
-
               <div class="w-12 h-12 rounded-full bg-orange-100 text-primary flex items-center justify-center font-bold text-xl mr-3 shadow-sm uppercase group-hover:bg-primary group-hover:text-white transition-colors overflow-hidden">
                 <img th:if="${ad.author.avatarUrl != null}" th:src="${ad.author.avatarUrl}" alt="Avatar" class="w-full h-full object-cover">
                 <span th:unless="${ad.author.avatarUrl != null}" th:text="${#strings.substring(ad.author.displayName,0,1)}">A</span>
               </div>
-
               <div>
                 <p class="font-bold text-gray-800 group-hover:text-primary transition-colors" th:text="${ad.author.displayName}">Nazwa Autora</p>
                 <p class="text-xs text-gray-500">Zobacz profil</p>
@@ -153,10 +152,13 @@
         </div>
 
         <div th:unless="${#authorization.expression('isAuthenticated()') and #authentication.name == ad.author.email}" class="flex space-x-3">
-          <button class="flex-1 bg-primary hover:bg-primaryHover text-white py-3 px-4 rounded-xl font-bold transition shadow-md flex justify-center items-center">
+
+          <!-- ZAKTUALIZOWANY PRZYCISK: Teraz to tag <a> prowadzący do kontrolera czatu! -->
+          <a th:href="@{/messages/{adId}/{userId}(adId=${ad.id}, userId=${ad.author.id})}"
+             class="flex-1 bg-primary hover:bg-primaryHover text-white py-3 px-4 rounded-xl font-bold transition shadow-md flex justify-center items-center cursor-pointer">
             <i class="ph ph-chat-teardrop-dots text-xl mr-2"></i>
             Napisz wiadomość
-          </button>
+          </a>
 
           <a th:if="${ad.author.mobile != null}" th:href="'tel:' + ${ad.author.mobile}" class="bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 p-3 w-14 rounded-xl transition shadow-sm flex items-center justify-center" title="Zadzwoń">
             <i class="ph ph-phone text-2xl text-primary"></i>

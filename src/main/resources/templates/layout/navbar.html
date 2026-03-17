@@ -29,16 +29,29 @@
                             Witaj, <strong sec:authentication="name" class="text-gray-700"></strong>!
                         </span>
 
-                    <!-- Link do panelu Moje ogłoszenia -->
-                    <a th:href="@{/my-ads}" class="text-gray-600 hover:text-primary transition font-medium ml-2 mr-2 flex items-center">
-                        <i class="ph ph-list-dashes text-xl mr-1"></i> Moje ogłoszenia
+                    <a th:href="@{/my-ads}" class="text-gray-600 hover:text-primary transition font-medium ml-2 mr-2 flex items-center" title="Moje ogłoszenia">
+                        <i class="ph ph-list-dashes text-2xl"></i>
                     </a>
 
                     <a th:href="@{/ads/new}" class="bg-primary hover:bg-primaryHover text-white px-5 py-2 rounded-full font-medium transition shadow-sm flex items-center">
                         <i class="ph ph-plus-circle mr-2 text-lg"></i> Dodaj
                     </a>
 
-                    <!-- Przycisk Ustawień (Trybik) -->
+                    <!-- SKRZYNKA ODBIORCZA Z POWIADOMIENIEM (Pobierane "Na Żywo") -->
+                    <a th:href="@{/messages}" class="text-gray-600 hover:text-primary transition ml-2 flex items-center relative" title="Wiadomości"
+                       th:with="unreadCount=${messageService.getUnreadMessagesCount(#authentication.name)}">
+
+                        <i class="ph ph-envelope-simple text-2xl"></i>
+
+                        <!-- Plakietka pojawia się tylko, jeśli unreadCount > 0 -->
+                        <span th:if="${unreadCount > 0}" class="absolute top-0 right-0 -mt-1 -mr-1 flex h-4 w-4">
+                                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                                <span class="relative inline-flex rounded-full h-4 w-4 bg-red-500 text-[9px] font-bold text-white items-center justify-center border-2 border-surface"
+                                      th:text="${unreadCount > 99 ? '99+' : unreadCount}">1</span>
+                            </span>
+                    </a>
+
+                    <!-- Ustawienia -->
                     <a th:href="@{/profile}" class="text-gray-600 hover:text-primary transition ml-2 flex items-center" title="Ustawienia konta">
                         <i class="ph ph-gear text-2xl"></i>
                     </a>

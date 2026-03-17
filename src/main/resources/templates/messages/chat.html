@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="pl" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout/base :: layout(~{::main})}">
+<body>
+<main class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full flex-grow flex flex-col h-[calc(100vh-64px)]">
+
+    <!-- Nagłówek czatu -->
+    <div class="bg-white rounded-t-2xl shadow-sm border border-gray-100 p-4 flex items-center justify-between z-10">
+        <div class="flex items-center min-w-0">
+            <a th:href="@{/messages}" class="mr-4 text-gray-400 hover:text-primary transition">
+                <i class="ph ph-arrow-left text-2xl"></i>
+            </a>
+
+            <a th:href="@{/users/{id}(id=${otherUser.id})}" class="flex items-center min-w-0 group cursor-pointer">
+                <div class="w-10 h-10 rounded-full bg-orange-100 text-primary flex items-center justify-center font-bold shadow-sm uppercase overflow-hidden mr-3 flex-shrink-0 group-hover:bg-primary group-hover:text-white transition-colors">
+                    <img th:if="${otherUser.avatarUrl != null}" th:src="${otherUser.avatarUrl}" alt="Avatar" class="w-full h-full object-cover">
+                    <span th:unless="${otherUser.avatarUrl != null}" th:text="${#strings.substring(otherUser.displayName,0,1)}">A</span>
+                </div>
+                <div class="truncate">
+                    <h2 class="text-lg font-bold text-gray-800 truncate group-hover:text-primary transition-colors" th:text="${otherUser.displayName}">Rozmówca</h2>
+                    <p class="text-xs text-gray-500 truncate hidden sm:block">Dotyczy ogłoszenia: <span class="font-medium text-gray-700" th:text="${ad.title}">Tytuł</span></p>
+                </div>
+            </a>
+        </div>
+
+        <!-- Link do ogłoszenia -->
+        <a href="#" th:hx-get="@{/ads/{id}(id=${ad.id})}" hx-target="#modal-container" hx-swap="innerHTML" class="ml-4 flex-shrink-0 bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-700 py-1.5 px-3 rounded-lg text-xs font-bold transition flex items-center whitespace-nowrap">
+            <i class="ph ph-paw-print mr-1"></i> Ogłoszenie
+        </a>
+    </div>
+
+    <!-- Obszar wiadomości -->
+    <div id="chat-container" class="bg-gray-50 flex-grow border-l border-r border-gray-100 p-4 overflow-y-auto flex flex-col space-y-4">
+
+        <div th:if="${#lists.isEmpty(messages)}" class="m-auto text-center text-gray-400 text-sm bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
+            To początek Waszej konwersacji.<br>Przywitaj się!
+        </div>
+
+        <!-- Pojedyncza wiadomość -->
+        <div th:each="msg : ${messages}" class="flex w-full" th:classappend="${msg.sender.id == me.id} ? 'justify-end' : 'justify-start'">
+
+            <div class="max-w-[75%] md:max-w-[60%] flex flex-col">
+                <div class="p-3 rounded-2xl shadow-sm relative"
+                     th:classappend="${msg.sender.id == me.id} ? 'bg-primary text-white rounded-tr-sm' : 'bg-white text-gray-800 border border-gray-100 rounded-tl-sm'">
+                    <p class="text-sm whitespace-pre-wrap leading-relaxed" th:text="${msg.content}">Treść wiadomości...</p>
+                </div>
+                <!-- Data i godzina -->
+                <span class="text-[10px] text-gray-400 mt-1 px-1"
+                      th:classappend="${msg.sender.id == me.id} ? 'text-right' : 'text-left'"
+                      th:text="${#temporals.format(msg.sentAt, 'dd.MM.yyyy HH:mm')}">14:30</span>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Formularz wysyłania (na dole) -->
+    <div class="bg-white rounded-b-2xl shadow-sm border border-gray-100 p-3">
+        <form th:action="@{/messages/{adId}/{userId}(adId=${ad.id}, userId=${otherUser.id})}" method="post" class="flex items-end gap-2 relative">
+                <textarea name="content" rows="1" required placeholder="Napisz wiadomość..."
+                          class="w-full bg-gray-50 border border-gray-200 text-gray-800 text-sm rounded-xl focus:ring-primary focus:border-primary block p-3 outline-none resize-none min-h-[44px] max-h-32 overflow-y-auto custom-scrollbar"
+                          oninput="this.style.height = ''; this.style.height = this.scrollHeight + 'px'"></textarea>
+
+            <button type="submit" class="bg-primary hover:bg-primaryHover text-white h-[44px] px-5 rounded-xl font-bold transition shadow-sm flex items-center justify-center flex-shrink-0">
+                <i class="ph-fill ph-paper-plane-right text-xl"></i>
+            </button>
+        </form>
+    </div>
+
+    <!-- Skrypt przewijający czat na sam dół przy otwarciu -->
+    <script>
+            window.addEventListener('DOMContentLoaded', (event) => {
+                const container = document.getElementById('chat-container');
+                if(container) {
+                    container.scrollTop = container.scrollHeight;
+                }
+            });
+        </script>
+</main>
+</body>
+</html>

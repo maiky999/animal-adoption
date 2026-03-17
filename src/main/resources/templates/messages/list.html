@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="pl" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout/base :: layout(~{::main})}">
+<body>
+<main class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10 w-full flex-grow">
+
+  <div class="mb-8 border-b border-gray-200 pb-5 flex items-center justify-between">
+    <div>
+      <h2 class="text-3xl font-bold text-gray-800">Skrzynka odbiorcza</h2>
+      <p class="text-gray-500 mt-2">Twoje konwersacje dotyczące ogłoszeń adopcyjnych.</p>
+    </div>
+    <i class="ph-fill ph-chats-teardrop text-5xl text-gray-200"></i>
+  </div>
+
+  <!-- Brak wiadomości -->
+  <div th:if="${#lists.isEmpty(conversations)}" class="text-center py-20 bg-white rounded-2xl border border-dashed border-gray-300">
+    <i class="ph ph-envelope-open text-6xl text-gray-300 mb-4"></i>
+    <h3 class="text-xl font-medium text-gray-600">Nie masz jeszcze żadnych wiadomości</h3>
+    <p class="text-gray-400 mt-2">Skontaktuj się z wystawiającymi ogłoszenia, aby rozpocząć rozmowę.</p>
+    <a th:href="@{/ads}" class="mt-6 inline-block bg-primary hover:bg-primaryHover text-white px-6 py-3 rounded-full font-bold transition shadow-sm">
+      Przeglądaj ogłoszenia
+    </a>
+  </div>
+
+  <!-- Lista konwersacji -->
+  <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden" th:unless="${#lists.isEmpty(conversations)}">
+    <ul class="divide-y divide-gray-100">
+
+      <li th:each="conv : ${conversations}" class="hover:bg-gray-50 transition">
+        <a th:href="@{/messages/{adId}/{userId}(adId=${conv.ad.id}, userId=${conv.otherUser.id})}" class="flex items-center p-5">
+
+          <!-- Awatar rozmówcy -->
+          <div class="relative flex-shrink-0">
+            <div class="w-14 h-14 rounded-full bg-orange-100 text-primary flex items-center justify-center font-bold text-xl shadow-sm uppercase overflow-hidden border-2 border-white">
+              <img th:if="${conv.otherUser.avatarUrl != null}" th:src="${conv.otherUser.avatarUrl}" alt="Avatar" class="w-full h-full object-cover">
+              <span th:unless="${conv.otherUser.avatarUrl != null}" th:text="${#strings.substring(conv.otherUser.displayName,0,1)}">A</span>
+            </div>
+            <!-- Plakietka ilości nieprzeczytanych -->
+            <div th:if="${conv.unreadCount > 0}" class="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold w-5 h-5 flex items-center justify-center rounded-full border-2 border-white" th:text="${conv.unreadCount}">1</div>
+          </div>
+
+          <!-- Treść skrócona -->
+          <div class="ml-4 flex-grow min-w-0">
+            <div class="flex justify-between items-baseline mb-1">
+              <h3 class="text-lg font-bold text-gray-800 truncate pr-4" th:text="${conv.otherUser.displayName}">Nazwa rozmówcy</h3>
+              <span class="text-xs text-gray-400 whitespace-nowrap" th:text="${#temporals.format(conv.latestMessage.sentAt, 'dd.MM HH:mm')}">12.04 14:30</span>
+            </div>
+
+            <p class="text-xs text-primary font-bold uppercase tracking-wider mb-1 truncate">
+              Dotyczy: <span class="text-gray-600" th:text="${conv.ad.title}">Tytuł ogłoszenia</span>
+            </p>
+
+            <!-- Skrót ostatniej wiadomości pogrubiony jeśli nieprzeczytana -->
+            <p class="text-sm truncate"
+               th:classappend="${conv.unreadCount > 0} ? 'text-gray-900 font-bold' : 'text-gray-500'"
+               th:text="${(conv.latestMessage.sender.id == conv.otherUser.id ? '' : 'Ty: ') + conv.latestMessage.content}">
+              Ostatnia wiadomość...
+            </p>
+          </div>
+
+          <!-- Strzałka -->
+          <div class="ml-4 text-gray-300">
+            <i class="ph ph-caret-right text-xl"></i>
+          </div>
+        </a>
+      </li>
+
+    </ul>
+  </div>
+
+</main>
+</body>
+</html>
