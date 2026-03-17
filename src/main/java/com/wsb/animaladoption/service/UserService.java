@@ -10,7 +10,7 @@ import com.wsb.animaladoption.model.User;
 import com.wsb.animaladoption.model.VerificationToken;
 import com.wsb.animaladoption.repository.UserRepository;
 import com.wsb.animaladoption.repository.VerificationTokenRepository;
-import jakarta.transaction.Transactional;
+import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
