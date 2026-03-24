@@ -27,9 +27,11 @@
             </p>
 
             <div class="flex flex-wrap justify-center md:justify-start gap-4">
-                <a th:href="'mailto:' + ${profileUser.email}" class="bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-700 py-2 px-5 rounded-xl text-sm font-bold transition flex items-center shadow-sm">
-                    <i class="ph-fill ph-envelope-simple mr-2 text-lg text-primary"></i> Napisz e-mail
-                </a>
+
+                <!-- POPRAWKA: Zmiana z mailto: na płynne przewijanie do listy ogłoszeń -->
+                <button onclick="document.getElementById('ads-section').scrollIntoView({ behavior: 'smooth' });" class="bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-700 py-2 px-5 rounded-xl text-sm font-bold transition flex items-center shadow-sm">
+                    <i class="ph-fill ph-chat-teardrop-dots mr-2 text-lg text-primary"></i> Napisz wiadomość
+                </button>
 
                 <a th:if="${profileUser.mobile != null}" th:href="'tel:' + ${profileUser.mobile}" class="bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-700 py-2 px-5 rounded-xl text-sm font-bold transition flex items-center shadow-sm">
                     <i class="ph-fill ph-phone mr-2 text-lg text-primary"></i>
@@ -45,8 +47,10 @@
         </div>
     </div>
 
-    <div class="mb-8 border-b border-gray-200 pb-5">
+    <!-- POPRAWKA: Dodane ID ads-section oraz instrukcja dla użytkownika -->
+    <div id="ads-section" class="mb-8 border-b border-gray-200 pb-5 pt-4">
         <h3 class="text-2xl font-bold text-gray-800">Ogłoszenia użytkownika</h3>
+        <p class="text-gray-500 mt-2 text-sm">Wybierz ogłoszenie i kliknij "Podgląd", aby wysłać wiadomość w sprawie konkretnego zwierzaka.</p>
     </div>
 
     <!-- Brak ogłoszeń -->

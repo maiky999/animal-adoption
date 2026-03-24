@@ -37,6 +37,10 @@ public class AdService {
         return adRepository.findAllByAuthorEmailOrderByCreatedAtDesc(authorEmail);
     }
 
+    public List<Ad> findPendingAds() {
+        return adRepository.findAllByStatusOrderByCreatedAtDesc(AdStatusEnum.PENDING);
+    }
+
     @Transactional
     public void changeAdStatus(Long adId, AdStatusEnum newStatus, String authorEmail) {
         Ad ad = findById(adId);
@@ -46,6 +50,17 @@ public class AdService {
         }
 
         ad.setStatus(newStatus);
+        adRepository.save(ad);
+    }
+
+    @Transactional
+    public void moderateAd(Long adId, boolean approve) {
+        Ad ad = findById(adId);
+        if (approve) {
+            ad.setStatus(AdStatusEnum.ACTIVE);
+        } else {
+            ad.setStatus(AdStatusEnum.REJECTED);
+        }
         adRepository.save(ad);
     }
 
@@ -63,7 +78,7 @@ public class AdService {
                 .imageUrls(imageUrls)
                 .category(category)
                 .author(author)
-                .status(AdStatusEnum.ACTIVE)
+                .status(AdStatusEnum.PENDING)
                 .build();
 
         return adRepository.save(ad);
@@ -85,6 +100,8 @@ public class AdService {
             List<String> newImages = fileStorageService.storeFiles(dto.getImageFiles());
             ad.setImageUrls(newImages);
         }
+
+        ad.setStatus(AdStatusEnum.PENDING);
 
         adRepository.save(ad);
     }
