@@ -22,6 +22,7 @@ public class SecurityConfig {
     public SecurityFilterChain filterChain(HttpSecurity http, UserDetailsService userDetailsService) throws Exception {
         http
                 .authorizeHttpRequests(authorize -> authorize
+                        .requestMatchers("/moderation/**").hasAnyRole("MODERATOR", "ADMIN")
                         .requestMatchers("/", "/ads", "/ads/**", "/register", "/login", "/css/**", "/js/**", "/images/**", "/error", "/uploads/**", "/verify", "/users/**").permitAll()
                         .anyRequest().authenticated()
                 ).formLogin(form -> form

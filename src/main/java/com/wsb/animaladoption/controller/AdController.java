@@ -12,6 +12,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.util.List;
 
@@ -47,13 +48,15 @@ public class AdController {
     public String createAd(@Valid @ModelAttribute AdCreateDto adDto,
                            BindingResult bindingResult,
                            @AuthenticationPrincipal UserDetails currentUser,
-                           Model model) {
+                           Model model,
+                           RedirectAttributes redirectAttributes) {
         if (bindingResult.hasErrors()) {
             model.addAttribute("categories", categoryRepository.findAllByOrderByIdAsc());
             return "ads/form";
         }
         adService.createAd(adDto, currentUser.getUsername());
-        return "redirect:/ads";
+        redirectAttributes.addFlashAttribute("infoMessage", "Twoje ogłoszenie zostało dodane i oczekuje na akceptację moderatora. Pojawi się w serwisie po weryfikacji.");
+        return "redirect:/my-ads";
     }
 
     @GetMapping("/{id}/edit")
@@ -84,7 +87,8 @@ public class AdController {
                            @Valid @ModelAttribute("adCreateDto") AdCreateDto dto,
                            BindingResult bindingResult,
                            @AuthenticationPrincipal UserDetails currentUser,
-                           Model model) {
+                           Model model,
+                           RedirectAttributes redirectAttributes) {
         if (bindingResult.hasErrors()) {
             model.addAttribute("categories", categoryRepository.findAllByOrderByIdAsc());
             model.addAttribute("editMode", true);
@@ -93,6 +97,7 @@ public class AdController {
         }
 
         adService.updateAd(id, dto, currentUser.getUsername());
+        redirectAttributes.addFlashAttribute("infoMessage", "Ogłoszenie zostało zaktualizowane. Ze względów bezpieczeństwa musi zostać ponownie zweryfikowane przez moderatora.");
         return "redirect:/my-ads";
     }
 }

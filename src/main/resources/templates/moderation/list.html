@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="pl" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout/base :: layout(~{::main})}">
+<body>
+<main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 w-full flex-grow relative">
+
+  <div class="mb-8 border-b border-gray-200 pb-5 flex items-center">
+    <i class="ph-fill ph-shield-check text-5xl text-red-500 mr-4"></i>
+    <div>
+      <h2 class="text-3xl font-bold text-gray-800">Panel Moderatora</h2>
+      <p class="text-gray-500 mt-2">Ogłoszenia oczekujące na weryfikację przed publikacją na platformie.</p>
+    </div>
+  </div>
+
+  <!-- Gdy nie ma nic do moderacji -->
+  <div th:if="${#lists.isEmpty(pendingAds)}" class="text-center py-20 bg-white rounded-2xl border border-dashed border-gray-300">
+    <i class="ph-fill ph-check-circle text-6xl text-green-400 mb-4"></i>
+    <h3 class="text-xl font-medium text-gray-600">Dobra robota!</h3>
+    <p class="text-gray-400 mt-2">Nie ma żadnych ogłoszeń oczekujących na zatwierdzenie.</p>
+  </div>
+
+  <!-- Siatka oczekujących ogłoszeń -->
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" th:unless="${#lists.isEmpty(pendingAds)}">
+
+    <article th:each="ad : ${pendingAds}" class="bg-yellow-50/30 rounded-2xl shadow-sm border border-yellow-200 overflow-hidden flex flex-col transition hover:shadow-md ring-2 ring-transparent hover:ring-yellow-400">
+
+      <div class="relative h-48 bg-gray-100 flex-shrink-0 cursor-pointer group overflow-hidden"
+           th:hx-get="@{/ads/{id}(id=${ad.id})}"
+           hx-target="#modal-container"
+           hx-swap="innerHTML">
+
+        <img th:if="${not #lists.isEmpty(ad.imageUrls)}" th:src="${ad.imageUrls[0]}" alt="Zdjęcie" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+        <div th:if="${#lists.isEmpty(ad.imageUrls)}" class="w-full h-full flex items-center justify-center text-gray-300 group-hover:scale-105 transition-transform duration-500">
+          <i class="ph ph-paw-print text-5xl"></i>
+        </div>
+
+        <div class="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center z-10">
+          <div class="bg-white/95 text-gray-800 px-5 py-2 rounded-full font-bold flex items-center shadow-lg transform translate-y-4 group-hover:translate-y-0 transition-all duration-300">
+            <i class="ph text-xl ph-eye mr-2 text-primary"></i> Sprawdź treść
+          </div>
+        </div>
+
+        <div class="absolute top-3 right-3 bg-yellow-500 text-white px-3 py-1 rounded-md text-xs font-bold shadow-sm flex items-center z-20">
+          <i class="ph-fill ph-hourglass mr-1"></i> Oczekuje
+        </div>
+      </div>
+
+      <div class="p-5 flex-grow flex flex-col">
+        <span class="text-xs font-bold text-primary uppercase tracking-wider mb-1" th:text="${ad.category.name}">Kategoria</span>
+
+        <h3 class="text-lg font-bold text-gray-800 mb-1 leading-tight line-clamp-2" th:text="${ad.title}">Tytuł</h3>
+
+        <div class="flex items-center text-xs text-gray-500 mb-4 mt-2">
+          <div class="w-6 h-6 rounded-full bg-orange-100 text-primary flex items-center justify-center mr-2 font-bold uppercase overflow-hidden">
+            <img th:if="${!#strings.isEmpty(ad.author.avatarUrl)}" th:src="${ad.author.avatarUrl}" class="w-full h-full object-cover">
+            <span th:unless="${!#strings.isEmpty(ad.author.avatarUrl)}" th:text="${#strings.substring(ad.author.displayName,0,1)}">A</span>
+          </div>
+          <span class="font-medium text-gray-700 truncate" th:text="${ad.author.email}">Autor</span>
+        </div>
+
+        <div class="mt-auto pt-4 border-t border-yellow-200 flex gap-2">
+          <!-- Odrzuć -->
+          <form th:action="@{/moderation/ads/{id}/reject(id=${ad.id})}" method="post" class="flex-1">
+            <button type="submit" class="w-full bg-red-50 hover:bg-red-100 border border-red-200 text-red-700 py-2 rounded-xl text-sm font-bold transition flex items-center justify-center" title="Odrzuć ogłoszenie">
+              <i class="ph-bold ph-x mr-1"></i> Odrzuć
+            </button>
+          </form>
+
+          <!-- Zatwierdź -->
+          <form th:action="@{/moderation/ads/{id}/approve(id=${ad.id})}" method="post" class="flex-1">
+            <button type="submit" class="w-full bg-green-500 hover:bg-green-600 text-white py-2 rounded-xl text-sm font-bold transition flex items-center justify-center shadow-sm" title="Zatwierdź i publikuj">
+              <i class="ph-bold ph-check mr-1"></i> Zatwierdź
+            </button>
+          </form>
+        </div>
+      </div>
+    </article>
+
+  </div>
+</main>
+</body>
+</html>

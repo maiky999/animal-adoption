@@ -17,6 +17,11 @@
                     Przeglądaj ogłoszenia
                 </a>
 
+                <!-- NOWOŚĆ: Link widoczny tylko dla Moderatora/Admina -->
+                <a sec:authorize="hasAnyRole('MODERATOR', 'ADMIN')" th:href="@{/moderation/ads}" class="text-red-600 hover:text-red-700 transition font-bold mr-4 flex items-center">
+                    <i class="ph-fill ph-shield-check mr-1 text-xl"></i> Moderacja
+                </a>
+
                 <!-- Dla niezalogowanych -->
                 <div sec:authorize="!isAuthenticated()" class="flex items-center space-x-4">
                     <a th:href="@{/login}" class="text-gray-600 hover:text-primary transition font-medium">Zaloguj się</a>
@@ -25,9 +30,9 @@
 
                 <!-- Dla zalogowanych -->
                 <div sec:authorize="isAuthenticated()" class="flex items-center space-x-4">
-                        <span class="text-sm text-gray-500 hidden lg:block">
-                            Witaj, <strong sec:authentication="name" class="text-gray-700"></strong>!
-                        </span>
+                    <span class="text-sm text-gray-500 hidden lg:block">
+                        Witaj, <strong sec:authentication="name" class="text-gray-700"></strong>!
+                    </span>
 
                     <a th:href="@{/my-ads}" class="text-gray-600 hover:text-primary transition font-medium ml-2 mr-2 flex items-center" title="Moje ogłoszenia">
                         <i class="ph ph-list-dashes text-2xl"></i>
@@ -37,21 +42,18 @@
                         <i class="ph ph-plus-circle mr-2 text-lg"></i> Dodaj
                     </a>
 
-                    <!-- SKRZYNKA ODBIORCZA Z POWIADOMIENIEM (Pobierane "Na Żywo") -->
                     <a th:href="@{/messages}" class="text-gray-600 hover:text-primary transition ml-2 flex items-center relative" title="Wiadomości"
                        th:with="unreadCount=${messageService.getUnreadMessagesCount(#authentication.name)}">
 
                         <i class="ph ph-envelope-simple text-2xl"></i>
 
-                        <!-- Plakietka pojawia się tylko, jeśli unreadCount > 0 -->
                         <span th:if="${unreadCount > 0}" class="absolute top-0 right-0 -mt-1 -mr-1 flex h-4 w-4">
-                                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                                <span class="relative inline-flex rounded-full h-4 w-4 bg-red-500 text-[9px] font-bold text-white items-center justify-center border-2 border-surface"
-                                      th:text="${unreadCount > 99 ? '99+' : unreadCount}">1</span>
-                            </span>
+                            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                            <span class="relative inline-flex rounded-full h-4 w-4 bg-red-500 text-[9px] font-bold text-white items-center justify-center border-2 border-surface"
+                                  th:text="${unreadCount > 99 ? '99+' : unreadCount}">1</span>
+                        </span>
                     </a>
 
-                    <!-- Ustawienia -->
                     <a th:href="@{/profile}" class="text-gray-600 hover:text-primary transition ml-2 flex items-center" title="Ustawienia konta">
                         <i class="ph ph-gear text-2xl"></i>
                     </a>
