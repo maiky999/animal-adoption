@@ -1,66 +1,78 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
 <body>
-<nav th:fragment="navbar" class="bg-surface shadow-sm sticky top-0 z-50">
+<nav th:fragment="navbar" class="bg-surface/90 backdrop-blur-md shadow-[0_4px_20px_-10px_rgba(0,0,0,0.05)] sticky top-0 z-50 border-b border-accent/50 transition-all duration-300">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="flex justify-between h-16">
+        <div class="flex justify-between h-20">
             <!-- Logo -->
-            <a th:href="@{/}" class="flex items-center cursor-pointer">
-                <i class="ph-fill ph-paw-print text-3xl text-primary mr-2"></i>
-                <span class="font-bold text-2xl tracking-tight text-textMain"><span class="text-primary">Łapka</span></span>
+            <a th:href="@{/}" class="flex items-center cursor-pointer group">
+                <div class="bg-primary group-hover:bg-primaryHover transition-colors w-12 h-12 rounded-2xl rotate-3 flex items-center justify-center shadow-soft mr-3">
+                    <i class="ph-fill ph-paw-print text-3xl text-white -rotate-3 group-hover:rotate-12 transition-transform duration-300"></i>
+                </div>
+                <span class="font-black text-3xl tracking-tight text-textMain hidden sm:block">Łapka</span>
             </a>
 
             <!-- Opcje uwierzytelniania / Menu -->
-            <div class="flex items-center space-x-4">
+            <div class="flex items-center space-x-1 md:space-x-3">
 
-                <a th:href="@{/ads}" class="text-gray-600 hover:text-primary transition font-medium mr-4">
-                    Przeglądaj ogłoszenia
+                <!-- GŁÓWNA NAWIGACJA -->
+                <!-- Link do tablicy ogłoszeń -->
+                <a th:href="@{/ads}" class="text-textMain/70 hover:text-primary transition-colors font-bold px-3 py-2 rounded-xl hover:bg-accent hidden md:flex items-center">
+                    <i class="ph-bold ph-magnifying-glass mr-2"></i> Ogłoszenia
+                </a>
+                <!-- NOWOŚĆ: Link do listy poradników / artykułów -->
+                <a th:href="@{/articles}" class="text-textMain/70 hover:text-primary transition-colors font-bold px-3 py-2 rounded-xl hover:bg-accent hidden md:flex items-center">
+                    <i class="ph-bold ph-book-open-text mr-2"></i> Poradniki
                 </a>
 
-                <!-- NOWOŚĆ: Link widoczny tylko dla Moderatora/Admina -->
-                <a sec:authorize="hasAnyRole('MODERATOR', 'ADMIN')" th:href="@{/moderation/ads}" class="text-red-600 hover:text-red-700 transition font-bold mr-4 flex items-center">
-                    <i class="ph-fill ph-shield-check mr-1 text-xl"></i> Moderacja
-                </a>
+                <!-- Dropdown dla Moderatora (Zarządzanie Ogloszeniami i Dodawanie Artykułów) -->
+                <div sec:authorize="hasAnyRole('MODERATOR', 'ADMIN')" class="relative group">
+                    <button class="text-red-500 hover:text-red-600 hover:bg-red-50 transition font-bold px-3 py-2 rounded-xl flex items-center">
+                        <i class="ph-fill ph-shield-check mr-1 text-xl"></i> Moderacja
+                    </button>
+                    <!-- Menu rozwijane -->
+                    <div class="absolute right-0 mt-2 w-56 bg-white rounded-2xl shadow-lg border border-accent opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 z-50 overflow-hidden">
+                        <a th:href="@{/moderation/ads}" class="block px-4 py-3 text-sm font-bold text-gray-700 hover:bg-accent hover:text-primary"><i class="ph-bold ph-list mr-2"></i> Akceptacja ogłoszeń</a>
+                        <!-- NOWOŚĆ: Przycisk dodawania artykułu dla moderatora -->
+                        <a th:href="@{/moderation/articles/new}" class="block px-4 py-3 text-sm font-bold text-gray-700 hover:bg-accent hover:text-primary border-t border-accent/50"><i class="ph-bold ph-pen-nib mr-2"></i> Napisz nowy artykuł</a>
+                    </div>
+                </div>
 
                 <!-- Dla niezalogowanych -->
-                <div sec:authorize="!isAuthenticated()" class="flex items-center space-x-4">
-                    <a th:href="@{/login}" class="text-gray-600 hover:text-primary transition font-medium">Zaloguj się</a>
-                    <a th:href="@{/register}" class="bg-gray-100 hover:bg-gray-200 text-gray-800 px-5 py-2 rounded-full font-medium transition">Rejestracja</a>
+                <div sec:authorize="!isAuthenticated()" class="flex items-center space-x-2">
+                    <a th:href="@{/login}" class="text-textMain/80 hover:text-primary transition font-bold px-3 py-2">Zaloguj się</a>
+                    <a th:href="@{/register}" class="bg-textMain hover:bg-black text-white px-5 py-2.5 rounded-full font-bold transition shadow-md whitespace-nowrap">Dołącz</a>
                 </div>
 
                 <!-- Dla zalogowanych -->
-                <div sec:authorize="isAuthenticated()" class="flex items-center space-x-4">
-                    <span class="text-sm text-gray-500 hidden lg:block">
-                        Witaj, <strong sec:authentication="name" class="text-gray-700"></strong>!
-                    </span>
+                <div sec:authorize="isAuthenticated()" class="flex items-center space-x-1 sm:space-x-2">
 
-                    <a th:href="@{/my-ads}" class="text-gray-600 hover:text-primary transition font-medium ml-2 mr-2 flex items-center" title="Moje ogłoszenia">
-                        <i class="ph ph-list-dashes text-2xl"></i>
+                    <a th:href="@{/my-ads}" class="text-textMain/70 hover:text-primary hover:bg-accent p-2.5 rounded-2xl transition flex items-center" title="Moje ogłoszenia">
+                        <i class="ph-fill ph-folder-user text-2xl"></i>
                     </a>
 
-                    <a th:href="@{/ads/new}" class="bg-primary hover:bg-primaryHover text-white px-5 py-2 rounded-full font-medium transition shadow-sm flex items-center">
-                        <i class="ph ph-plus-circle mr-2 text-lg"></i> Dodaj
+                    <a th:href="@{/ads/new}" class="bg-primary hover:bg-primaryHover text-white px-4 py-2.5 rounded-full font-bold transition shadow-soft flex items-center transform hover:-translate-y-0.5">
+                        <i class="ph-bold ph-plus sm:mr-1 text-lg"></i> <span class="hidden sm:inline">Dodaj</span>
                     </a>
 
-                    <a th:href="@{/messages}" class="text-gray-600 hover:text-primary transition ml-2 flex items-center relative" title="Wiadomości"
+                    <a th:href="@{/messages}" class="text-textMain/70 hover:text-primary hover:bg-accent p-2.5 rounded-2xl transition flex items-center relative" title="Wiadomości"
                        th:with="unreadCount=${messageService.getUnreadMessagesCount(#authentication.name)}">
 
-                        <i class="ph ph-envelope-simple text-2xl"></i>
-
-                        <span th:if="${unreadCount > 0}" class="absolute top-0 right-0 -mt-1 -mr-1 flex h-4 w-4">
+                        <i class="ph-fill ph-chat-circle-text text-2xl"></i>
+                        <span th:if="${unreadCount > 0}" class="absolute top-1 right-1 flex h-4 w-4">
                             <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                            <span class="relative inline-flex rounded-full h-4 w-4 bg-red-500 text-[9px] font-bold text-white items-center justify-center border-2 border-surface"
+                            <span class="relative inline-flex rounded-full h-4 w-4 bg-red-500 text-[10px] font-black text-white items-center justify-center border-2 border-surface"
                                   th:text="${unreadCount > 99 ? '99+' : unreadCount}">1</span>
                         </span>
                     </a>
 
-                    <a th:href="@{/profile}" class="text-gray-600 hover:text-primary transition ml-2 flex items-center" title="Ustawienia konta">
-                        <i class="ph ph-gear text-2xl"></i>
+                    <a th:href="@{/profile}" class="text-textMain/70 hover:text-primary hover:bg-accent p-2.5 rounded-2xl transition flex items-center" title="Ustawienia konta">
+                        <i class="ph-fill ph-gear text-2xl"></i>
                     </a>
 
                     <form th:action="@{/logout}" method="post" class="m-0 flex items-center">
-                        <button type="submit" class="text-gray-600 hover:text-red-500 transition ml-2 flex items-center" title="Wyloguj">
-                            <i class="ph ph-sign-out text-2xl"></i>
+                        <button type="submit" class="text-textMain/70 hover:text-red-500 hover:bg-red-50 p-2.5 rounded-2xl transition flex items-center" title="Wyloguj">
+                            <i class="ph-bold ph-sign-out text-2xl"></i>
                         </button>
                     </form>
                 </div>

@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="pl" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout/base :: layout(~{::main})}">
+<body>
+<main class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-12 w-full flex-grow">
+
+  <div class="mb-6 flex items-center">
+    <a th:href="@{/articles}" class="w-12 h-12 bg-white border border-accent rounded-full flex items-center justify-center text-textMain hover:text-primary hover:bg-accent transition mr-4 shadow-sm">
+      <i class="ph-bold ph-arrow-left text-xl"></i>
+    </a>
+    <div>
+      <h2 class="text-3xl font-black text-textMain">Panel Edukatora</h2>
+      <p class="text-textMain/60 font-medium mt-1">Stwórz nowy poradnik lub artykuł dla użytkowników Łapki.</p>
+    </div>
+  </div>
+
+  <div class="bg-surface p-8 md:p-10 rounded-[3rem] shadow-sm border border-accent">
+
+    <form th:action="@{/moderation/articles/new}" th:object="${articleCreateDto}" method="post" enctype="multipart/form-data" class="space-y-6">
+
+      <!-- Tytuł -->
+      <div>
+        <label for="title" class="block text-base font-bold text-textMain mb-2">Tytuł artykułu</label>
+        <input type="text" id="title" th:field="*{title}" placeholder="Np. Jak prawidłowo i mądrze żywić młodego kota?"
+               class="w-full px-5 py-4 rounded-2xl bg-background border focus:ring-4 focus:ring-primary/20 focus:border-primary outline-none transition font-medium text-lg"
+               th:classappend="${#fields.hasErrors('title')} ? 'border-red-400' : 'border-accent'">
+        <p th:if="${#fields.hasErrors('title')}" th:errors="*{title}" class="mt-2 text-sm text-red-500 font-bold flex items-center"><i class="ph-fill ph-warning-circle mr-1"></i></p>
+      </div>
+
+      <!-- Zdjęcie Główne (Naprawiony podgląd) -->
+      <div>
+        <label for="imageFile" class="block text-base font-bold text-textMain mb-2">Zdjęcie główne (Tło artykułu)</label>
+        <!-- DODANO: min-h-[300px] flex items-center justify-center aby zapobiec zapadaniu się pola -->
+        <div class="relative bg-background border-2 border-dashed border-accent rounded-3xl p-8 min-h-[300px] flex items-center justify-center text-center hover:bg-orange-50/50 transition cursor-pointer group" onclick="document.getElementById('imageFile').click()">
+
+          <input type="file" id="imageFile" name="imageFile" accept="image/*" class="hidden" onchange="previewImage(event)">
+
+          <div id="uploadPlaceholder" class="flex flex-col items-center pointer-events-none relative z-10">
+            <i class="ph-fill ph-image text-5xl text-primary/50 group-hover:text-primary transition-colors mb-3"></i>
+            <span class="font-bold text-textMain group-hover:text-primary transition-colors">Kliknij, aby wybrać zdjęcie z dysku</span>
+            <span class="text-sm text-textMain/50 font-medium mt-1">Dopuszczalne formaty: JPG, PNG (maks 5MB)</span>
+          </div>
+
+          <img id="imagePreview" class="hidden absolute inset-0 w-full h-full object-cover rounded-3xl" />
+        </div>
+      </div>
+
+      <!-- Treść -->
+      <div>
+        <label for="content" class="block text-base font-bold text-textMain mb-2">Treść artykułu</label>
+        <textarea id="content" th:field="*{content}" rows="15" placeholder="Podziel się wiedzą... Używaj podwójnego entera (tzw. nowych linii) by stworzyć akapity."
+                  class="w-full px-5 py-4 rounded-3xl bg-background border focus:ring-4 focus:ring-primary/20 focus:border-primary outline-none transition font-medium resize-none"
+                  th:classappend="${#fields.hasErrors('content')} ? 'border-red-400' : 'border-accent'"></textarea>
+        <p th:if="${#fields.hasErrors('content')}" th:errors="*{content}" class="mt-2 text-sm text-red-500 font-bold flex items-center"><i class="ph-fill ph-warning-circle mr-1"></i></p>
+      </div>
+
+      <div class="pt-6">
+        <button type="submit" class="w-full bg-primary hover:bg-primaryHover text-white font-black py-4 px-6 rounded-full shadow-soft transition-all transform hover:-translate-y-1 text-lg flex items-center justify-center">
+          Opublikuj artykuł <i class="ph-bold ph-paper-plane-right ml-2"></i>
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Skrypt do podglądu wybranego obrazka -->
+  <script>
+        function previewImage(event) {
+            const file = event.target.files[0];
+            const preview = document.getElementById('imagePreview');
+            const placeholder = document.getElementById('uploadPlaceholder');
+
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    preview.src = e.target.result;
+                    preview.classList.remove('hidden');
+                    placeholder.classList.add('hidden');
+                }
+                reader.readAsDataURL(file);
+            }
+        }
+    </script>
+</main>
+</body>
+</html>

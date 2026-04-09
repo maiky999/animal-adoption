@@ -8,70 +8,95 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- HTMX -->
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
-    <!-- Ikony -->
+    <!-- Ikony Phosphor -->
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
 
     <script>
         tailwind.config = {
             theme: {
                 extend: {
-                    colors: { primary: '#f97316', primaryHover: '#ea580c', background: '#fcfaf8', surface: '#ffffff', textMain: '#292524' }
+                    colors: {
+                        primary: '#F27D42',
+                        primaryHover: '#D9652A',
+                        background: '#FFF8F3',
+                        surface: '#FFFFFF',
+                        textMain: '#4A3F35',
+                        accent: '#FDECE4'
+                    },
+                    fontFamily: {
+                        sans: ['Nunito', 'sans-serif'],
+                    },
+                    boxShadow: {
+                        'soft': '0 10px 40px -10px rgba(242, 125, 66, 0.15)',
+                    }
                 }
             }
         }
     </script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-        body { font-family: 'Inter', sans-serif; background-color: theme('colors.background'); color: theme('colors.textMain'); }
-        .fade-in { animation: fadeIn 0.3s ease-in; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&display=swap');
+
+        /* PŁYNNE PRZEWIJANIE (Dla Floatbara) */
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: 'Nunito', sans-serif;
+            background-color: theme('colors.background');
+            color: theme('colors.textMain');
+        }
+
+        ::-webkit-scrollbar { width: 10px; }
+        ::-webkit-scrollbar-track { background: theme('colors.background'); }
+        ::-webkit-scrollbar-thumb { background: #FDECE4; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #F27D42; }
+
+        .fade-in { animation: fadeIn 0.4s ease-out forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
-<body class="min-h-screen flex flex-col font-sans">
+<body class="min-h-screen flex flex-col antialiased relative selection:bg-primary selection:text-white">
 
-<!-- Wstrzykiwany Navbar -->
 <div th:replace="~{layout/navbar :: navbar}"></div>
 
-<!-- Globalny komunikat o pomyślnym wylogowaniu -->
-<div th:if="${param.logout}" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6 w-full fade-in z-40">
-    <div class="bg-green-50 text-green-700 p-4 rounded-xl text-sm border border-green-200 flex items-center shadow-sm">
-        <i class="ph-fill ph-check-circle text-2xl mr-3"></i>
-        <span class="font-medium">Wylogowano pomyślnie. Do zobaczenia wkrótce!</span>
+<div th:if="${param.logout}" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6 w-full fade-in z-40 relative">
+    <div class="bg-green-50 text-green-700 p-4 rounded-2xl text-sm border border-green-200 flex items-center shadow-soft">
+        <i class="ph-fill ph-check-circle text-2xl mr-3 text-green-500"></i>
+        <span class="font-bold text-base">Wylogowano pomyślnie. Czekamy na Twój powrót!</span>
     </div>
 </div>
 
-<!-- Główna treść strony wstrzykiwana tutaj -->
-<main class="flex-grow flex flex-col w-full" th:replace="${content}">
+<main class="flex-grow flex flex-col w-full relative z-10" th:replace="${content}">
     <!-- Content goes here -->
 </main>
 
-<!-- Kontener na modale (wykorzystywany przez HTMX) -->
 <div id="modal-container"></div>
 
-<footer class="bg-white border-t border-gray-200 mt-auto py-8">
+<footer class="bg-surface border-t border-accent mt-auto py-10 relative z-10">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center">
         <div class="flex items-center mb-4 md:mb-0">
-            <i class="ph-fill ph-paw-print text-2xl text-gray-400 mr-2"></i>
-            <span class="font-bold text-xl text-gray-400">Łapka</span>
+            <div class="w-10 h-10 bg-accent rounded-full flex items-center justify-center mr-3">
+                <i class="ph-fill ph-paw-print text-2xl text-primary"></i>
+            </div>
+            <span class="font-black text-2xl text-textMain tracking-tight">Łapka</span>
         </div>
-        <div class="text-gray-500 text-sm">
-            &copy; 2026 Łapka. Projekt edukacyjny.
+        <div class="text-textMain/60 font-medium text-sm flex items-center">
+            Stworzone z <i class="ph-fill ph-heart text-red-400 mx-1"></i> dla zwierząt. &copy; 2026.
         </div>
     </div>
 </footer>
 
 <script>
-        // Funkcja do zamykania modala HTMX
         function closeModal() {
             document.getElementById('modal-container').innerHTML = '';
             document.body.style.overflow = 'auto';
         }
-        // Nasłuchiwanie na załadowanie modala przez HTMX by zablokować scroll
         document.body.addEventListener('htmx:afterSwap', function(evt) {
             if(evt.detail.target.id === 'modal-container' && evt.detail.target.innerHTML.trim() !== '') {
                 document.body.style.overflow = 'hidden';
             }
         });
-    </script>
+</script>
 </body>
 </html>

@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="pl" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout/base :: layout(~{::main})}">
+<body>
+<main class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10 w-full flex-grow">
+
+  <!-- Pasek powrotu -->
+  <a th:href="@{/articles}" class="inline-flex items-center text-textMain/60 hover:text-primary font-bold transition mb-8 group">
+    <div class="w-10 h-10 bg-surface border border-accent rounded-full flex items-center justify-center mr-3 group-hover:bg-accent group-hover:border-primary/30 transition">
+      <i class="ph-bold ph-arrow-left text-xl"></i>
+    </div>
+    Wróć do listy poradników
+  </a>
+
+  <!-- Artykuł -->
+  <article class="bg-surface rounded-[3rem] shadow-sm border border-accent overflow-hidden">
+
+    <!-- Header ze zdjęciem -->
+    <div class="w-full h-64 md:h-[400px] relative bg-accent/30">
+      <img th:if="${article.imageUrl != null}" th:src="${article.imageUrl}" alt="Zdjęcie artykułu" class="w-full h-full object-cover">
+      <i th:unless="${article.imageUrl != null}" class="ph-fill ph-image text-8xl text-primary/30 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2"></i>
+
+      <!-- Gradient nakładany na dół zdjęcia dla lepszej czytelności jeśli zdjęcie jest ciemne -->
+      <div class="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
+
+      <div class="absolute bottom-8 left-8 right-8 text-white">
+        <div class="flex items-center text-sm font-bold mb-3 uppercase tracking-wider text-white/80">
+          <i class="ph-bold ph-calendar-blank mr-2 text-primary"></i>
+          <span th:text="${#temporals.format(article.createdAt, 'dd MMMM yyyy, HH:mm')}">Data</span>
+        </div>
+        <h1 class="text-3xl md:text-5xl font-black leading-tight drop-shadow-md" th:text="${article.title}">Tytuł artykułu</h1>
+      </div>
+    </div>
+
+    <!-- Ciało tekstu -->
+    <div class="p-8 md:p-12">
+
+      <!-- Autor -->
+      <div class="flex items-center mb-10 pb-8 border-b border-accent/50">
+        <div class="w-14 h-14 rounded-full bg-accent text-primary flex items-center justify-center mr-4 text-xl font-black border-2 border-white shadow-sm uppercase" th:text="${#strings.substring(article.author.displayName,0,1)}">A</div>
+        <div>
+          <p class="text-xs text-textMain/50 font-bold uppercase tracking-wider">Napisane przez eksperta</p>
+          <p class="font-black text-lg text-textMain" th:text="${article.author.displayName}">Autor</p>
+        </div>
+      </div>
+
+      <!-- Treść główna (Prose dla ładnego formatowania) -->
+      <div class="prose prose-lg prose-orange max-w-none text-textMain/80 font-medium leading-relaxed whitespace-pre-wrap" th:text="${article.content}">
+        Treść...
+      </div>
+
+    </div>
+  </article>
+</main>
+</body>
+</html>
