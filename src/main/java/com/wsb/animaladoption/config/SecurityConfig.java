@@ -23,7 +23,7 @@ public class SecurityConfig {
         http
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers("/moderation/**").hasAnyRole("MODERATOR", "ADMIN")
-                        .requestMatchers("/", "/ads", "/ads/**", "/register", "/login", "/css/**", "/js/**", "/images/**", "/error", "/uploads/**", "/verify", "/users/**").permitAll()
+                        .requestMatchers(getWhitelist()).permitAll()
                         .anyRequest().authenticated()
                 ).formLogin(form -> form
                         .loginPage("/login")
@@ -39,5 +39,14 @@ public class SecurityConfig {
                         .userDetailsService(userDetailsService)
                 );
         return http.build();
+    }
+
+    public String[] getWhitelist() {
+        return new String[] {
+                "/", "/ads", "/ads/**", "/register",
+                "/login", "/css/**", "/js/**", "/images/**",
+                "/error", "/uploads/**", "/verify", "/users/**",
+                "/articles", "/articles/**"
+        };
     }
 }

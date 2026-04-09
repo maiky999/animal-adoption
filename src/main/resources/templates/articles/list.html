@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="pl" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout/base :: layout(~{::main})}">
+<body>
+<main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 w-full flex-grow">
+
+    <!-- Komunikat sukcesu po dodaniu artykułu -->
+    <div th:if="${infoMessage}" class="bg-green-50 text-green-700 p-4 rounded-2xl text-sm mb-6 border border-green-200 flex items-center shadow-sm fade-in">
+        <i class="ph-fill ph-check-circle text-2xl mr-3 text-green-500"></i>
+        <span class="font-bold text-base" th:text="${infoMessage}"></span>
+    </div>
+
+    <!-- Nagłówek -->
+    <div class="bg-accent rounded-[3rem] p-10 mb-12 text-center relative overflow-hidden border border-orange-100 shadow-sm">
+        <i class="ph-fill ph-book-open-text absolute -left-10 -bottom-10 text-[200px] text-white opacity-40 -rotate-12"></i>
+        <div class="relative z-10">
+            <h1 class="text-4xl md:text-5xl font-black text-textMain mb-4">Poradniki i Edukacja</h1>
+            <p class="text-xl text-textMain/70 max-w-2xl mx-auto font-medium">Wszystko, co musisz wiedzieć o żywieniu, zdrowiu i wychowaniu zwierzaków. Wiedza prosto od naszych moderatorów i ekspertów.</p>
+        </div>
+    </div>
+
+    <div th:if="${#lists.isEmpty(articles)}" class="text-center py-20 bg-white rounded-[2rem] border border-dashed border-accent shadow-sm">
+        <i class="ph-fill ph-pen-nib text-6xl text-primary/30 mb-4"></i>
+        <h3 class="text-xl font-bold text-textMain">Brak artykułów</h3>
+        <p class="text-textMain/60 mt-2 font-medium">Nasi eksperci jeszcze pracują nad materiałami edukacyjnymi.</p>
+    </div>
+
+    <!-- Lista horyzontalna (inna forma niż ogłoszenia) -->
+    <div class="flex flex-col gap-8" th:unless="${#lists.isEmpty(articles)}">
+
+        <article th:each="article, iterStat : ${articles}" class="bg-surface rounded-[2rem] shadow-sm hover:shadow-soft transition-all duration-300 border border-accent overflow-hidden group flex flex-col md:flex-row transform hover:-translate-y-1">
+
+            <!-- Obszar zdjęcia (na lewo dla parzystych, na prawo dla nieparzystych - urozmaicenie) -->
+            <div class="w-full md:w-2/5 h-64 md:h-auto relative bg-accent/30 overflow-hidden" th:classappend="${iterStat.odd} ? 'md:order-2' : ''">
+                <a th:href="@{/articles/{id}(id=${article.id})}" class="block w-full h-full">
+                    <img th:if="${article.imageUrl != null}" th:src="${article.imageUrl}" alt="Zdjęcie artykułu" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700">
+                    <i th:unless="${article.imageUrl != null}" class="ph-fill ph-article text-8xl text-primary/30 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2"></i>
+                </a>
+            </div>
+
+            <!-- Obszar tekstu -->
+            <div class="p-8 md:p-10 w-full md:w-3/5 flex flex-col justify-center">
+                <div class="flex items-center text-sm text-textMain/50 font-bold mb-4 uppercase tracking-wider">
+                    <i class="ph-bold ph-calendar-blank mr-2 text-primary"></i>
+                    <span th:text="${#temporals.format(article.createdAt, 'dd MMMM yyyy')}">Data</span>
+                </div>
+
+                <a th:href="@{/articles/{id}(id=${article.id})}">
+                    <h2 class="text-3xl font-black text-textMain mb-4 leading-tight group-hover:text-primary transition-colors" th:text="${article.title}">Tytuł</h2>
+                </a>
+
+                <p class="text-textMain/70 font-medium text-lg mb-6 leading-relaxed line-clamp-3" th:text="${#strings.abbreviate(article.content, 250)}">Zajawka artykułu...</p>
+
+                <div class="mt-auto flex items-center justify-between">
+                    <div class="flex items-center text-sm text-textMain/80 font-bold">
+                        <div class="w-10 h-10 rounded-full bg-accent text-primary flex items-center justify-center mr-3 uppercase border border-white" th:text="${#strings.substring(article.author.displayName,0,1)}">A</div>
+                        <span th:text="${article.author.displayName}">Autor</span>
+                    </div>
+
+                    <a th:href="@{/articles/{id}(id=${article.id})}" class="bg-accent hover:bg-orange-100 text-primary font-bold px-6 py-2.5 rounded-full transition flex items-center">
+                        Czytaj <i class="ph-bold ph-arrow-right ml-2"></i>
+                    </a>
+                </div>
+            </div>
+
+        </article>
+    </div>
+
+</main>
+</body>
+</html>
