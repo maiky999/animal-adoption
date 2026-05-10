@@ -1,9 +1,7 @@
 package com.wsb.animaladoption.dto;
 
-import jakarta.validation.constraints.Email;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Pattern;
-import jakarta.validation.constraints.Size;
+import com.wsb.animaladoption.enums.UserTypeEnum;
+import jakarta.validation.constraints.*;
 import lombok.Data;
 import lombok.Getter;
 import lombok.Singular;
@@ -26,4 +24,7 @@ public class UserRegistrationDto {
     @NotBlank(message = "Numer telefonu jest wymagany")
     @Pattern(regexp = "^\\d{9}$", message = "Numer telefonu musi składać się dokładnie z 9 cyfr")
     private String mobile;
+
+    @NotNull(message = "Wybór typu konta jest wymagany")
+    private UserTypeEnum userType;
 }
