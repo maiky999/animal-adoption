@@ -9,14 +9,26 @@
         <div class="absolute top-0 right-0 w-64 h-64 bg-orange-50 rounded-full blur-3xl -z-10 translate-x-1/3 -translate-y-1/3"></div>
 
         <!-- Avatar z obsługą zdjęcia profilowego -->
-        <div class="w-32 h-32 rounded-full bg-primary text-white flex items-center justify-center font-bold text-5xl shadow-lg uppercase flex-shrink-0 overflow-hidden">
+        <div class="w-32 h-32 rounded-full bg-primary text-white flex items-center justify-center font-bold text-5xl shadow-lg uppercase flex-shrink-0 overflow-hidden relative">
             <img th:if="${profileUser.avatarUrl != null}" th:src="${profileUser.avatarUrl}" alt="Avatar" class="w-full h-full object-cover">
             <span th:unless="${profileUser.avatarUrl != null}" th:text="${#strings.substring(profileUser.displayName,0,1)}">A</span>
         </div>
 
         <!-- Informacje -->
         <div class="flex-grow text-center md:text-left">
-            <h2 class="text-3xl font-bold text-gray-800 mb-2" th:text="${profileUser.displayName}">Nazwa Użytkownika</h2>
+            <div class="flex flex-col md:flex-row items-center gap-3 mb-2">
+                <h2 class="text-3xl font-bold text-gray-800" th:text="${profileUser.displayName}">Nazwa Użytkownika</h2>
+
+                <!-- NOWOŚĆ: Plakietka typu użytkownika -->
+                <span th:if="${profileUser.userType != null and profileUser.userType.name() == 'ORGANIZATION'}"
+                      class="bg-blue-100 text-blue-700 text-xs px-3 py-1 rounded-full font-bold uppercase tracking-wider flex items-center shadow-sm">
+                    <i class="ph-fill ph-buildings mr-1 text-base"></i> Organizacja
+                </span>
+                <span th:if="${profileUser.userType != null and profileUser.userType.name() == 'PRIVATE'}"
+                      class="bg-green-100 text-green-700 text-xs px-3 py-1 rounded-full font-bold uppercase tracking-wider flex items-center shadow-sm">
+                    <i class="ph-fill ph-user mr-1 text-base"></i> Osoba prywatna
+                </span>
+            </div>
 
             <!-- Opcjonalny opis, domyślnie "Zaufany opiekun" -->
             <p th:if="${profileUser.description == null or profileUser.description.isEmpty()}" class="text-gray-500 mb-6 flex items-center justify-center md:justify-start">
@@ -28,7 +40,6 @@
 
             <div class="flex flex-wrap justify-center md:justify-start gap-4">
 
-                <!-- POPRAWKA: Zmiana z mailto: na płynne przewijanie do listy ogłoszeń -->
                 <button onclick="document.getElementById('ads-section').scrollIntoView({ behavior: 'smooth' });" class="bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-700 py-2 px-5 rounded-xl text-sm font-bold transition flex items-center shadow-sm">
                     <i class="ph-fill ph-chat-teardrop-dots mr-2 text-lg text-primary"></i> Napisz wiadomość
                 </button>
@@ -41,13 +52,12 @@
         </div>
 
         <!-- Statystyki -->
-        <div class="bg-orange-50 p-6 rounded-2xl text-center min-w-[150px] shadow-inner">
+        <div class="bg-orange-50 p-6 rounded-2xl text-center min-w-[150px] shadow-inner flex-shrink-0 mt-4 md:mt-0">
             <span class="block text-4xl font-black text-primary mb-1" th:text="${#lists.size(ads)}">0</span>
             <span class="text-xs font-bold text-gray-600 uppercase tracking-wider">Aktywne<br>ogłoszenia</span>
         </div>
     </div>
 
-    <!-- POPRAWKA: Dodane ID ads-section oraz instrukcja dla użytkownika -->
     <div id="ads-section" class="mb-8 border-b border-gray-200 pb-5 pt-4">
         <h3 class="text-2xl font-bold text-gray-800">Ogłoszenia użytkownika</h3>
         <p class="text-gray-500 mt-2 text-sm">Wybierz ogłoszenie i kliknij "Podgląd", aby wysłać wiadomość w sprawie konkretnego zwierzaka.</p>
