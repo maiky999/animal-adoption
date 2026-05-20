@@ -1,5 +1,6 @@
 package com.wsb.animaladoption.model;
 
+import com.wsb.animaladoption.security.StringCryptoConverter;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -30,6 +31,7 @@ public class Message {
     @JoinColumn(name = "ad_id")
     private Ad relatedAd;
 
+    @Convert(converter = StringCryptoConverter.class)
     @Column(columnDefinition = "TEXT", nullable = false)
     private String content;
 

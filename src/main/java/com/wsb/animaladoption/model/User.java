@@ -1,6 +1,7 @@
 package com.wsb.animaladoption.model;
 
 import com.wsb.animaladoption.enums.RoleEnum;
+import com.wsb.animaladoption.security.StringCryptoConverter;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -28,7 +29,8 @@ public class User {
     @Column(nullable = false, length = 100)
     private String displayName;
 
-    @Column(nullable = false, length = 9)
+    @Convert(converter = StringCryptoConverter.class)
+    @Column(nullable = false, length = 100) // zwiększyłem length, bo za szyfrowany tekst będzie dłuższy
     private String mobile;
 
     @Enumerated(EnumType.STRING)
