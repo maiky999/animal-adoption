@@ -2,6 +2,7 @@ package com.wsb.animaladoption.model;
 
 import com.wsb.animaladoption.enums.RoleEnum;
 import com.wsb.animaladoption.security.StringCryptoConverter;
+import com.wsb.animaladoption.enums.UserTypeEnum;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -35,6 +36,9 @@ public class User {
 
     @Enumerated(EnumType.STRING)
     private RoleEnum role;
+
+    @Enumerated(EnumType.STRING)
+    private UserTypeEnum userType;
 
     private boolean isEmailVerified = false;
 

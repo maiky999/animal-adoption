@@ -37,6 +37,7 @@ public class UserService {
                 .displayName(dto.getDisplayName())
                 .mobile(dto.getMobile())
                 .role(RoleEnum.USER)
+                .userType(dto.getUserType())
                 .build();
 
         userRepository.save(user);
