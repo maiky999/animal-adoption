@@ -1,69 +1,42 @@
 package com.wsb.animaladoption.service;
 
-import org.springframework.beans.factory.annotation.Value;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
-import java.io.File;
-import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
-@SuppressWarnings("unused")
 @Service
 public class DatabaseBackupService {
 
-    @Value("${spring.datasource.username:postgres}")
-    private String dbUser;
+    private static final Logger log = LoggerFactory.getLogger(DatabaseBackupService.class);
+    private final JdbcTemplate jdbcTemplate;
 
-    @Value("${spring.datasource.url:jdbc:postgresql://localhost:5432/animal_adoption}")
-    private String dbUrl;
+    public DatabaseBackupService(JdbcTemplate jdbcTemplate) {
+        this.jdbcTemplate = jdbcTemplate;
+    }
 
-    // godzina uruchamiania backupa, ustawiłem 2 w nocy
-    @Scheduled(cron = "0 0 2 * * ?")
-    public void executeBackup() {
+    // @Scheduled(cron = "0 * * * * *") do testów jak coś, backup co minute
+    // backup robiony o 2 w nocy:
+    @Scheduled(cron = "0 0 2 * * *")
+    public void backupDatabase() {
+        String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
+
+        // ściezka ewnątrz kontenera Dockera, połączona z PC
+        String fileName = "/var/opt/mssql/backups/animaladoption_" + timestamp + ".bak";
+
+        // komenda SQL Servera do tworzenia backupu
+        String sql = "BACKUP DATABASE animaladoption TO DISK = '" + fileName + "' WITH FORMAT";
+
         try {
-            // wyciąga nazwe bazy danych z urla
-            String dbName = dbUrl.substring(dbUrl.lastIndexOf("/") + 1);
-
-            // formatuje daty do nazwy pliku
-            String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
-            String backupFileName = "backup_" + dbName + "_" + timestamp + ".sql"; // wydaje mi sie, ze to tak najbardziej logiczna nazwa
-
-            // tworzy folder na backupy, jakby nie istniały (ofc, że u nas istnieją, odpowiedzialna firma)
-            File backupDir = new File("./backups");
-            if (!backupDir.exists()) {
-                backupDir.mkdirs();
-            }
-
-            String outputPath = backupDir.getAbsolutePath() + File.separator + backupFileName;
-
-            // cała magia, budowanie polecenia pg_dump
-            ProcessBuilder processBuilder = new ProcessBuilder(
-                    "pg_dump",
-                    "-U", dbUser,
-                    "-F", "c", // format kompresowania, podobno custom wydajny i bezpieczniejszy
-                    "-b", // dołącza duże obiekty, np. jakby jakieś zdjęcie było w bazie
-                    "-v", // większa szczegółowość logów
-                    "-f", outputPath,
-                    dbName
-            );
-
-            // wymaganie ustawionej zmiennej środowiskowej PGPASSWORD
-            // albo plik .pgpass, żeby nie pytało o hasło w konsoli
-            processBuilder.environment().put("PGPASSWORD", "TWOJE_HASLO_DO_BAZY"); // tu ustaw jakie masz haslo do bazy jak bedziesz testowac
-
-            Process process = processBuilder.start();
-            int exitCode = process.waitFor();
-
-            if (exitCode == 0) {
-                System.out.println("[BACKUP UDANY] Kopia zapasowa zapisana pomyślnie: " + outputPath);;
-            } else {
-                System.err.println("[BACKUP NIEUDANY] Coś poszło nie tak. Kod błędu: " + exitCode);
-            }
-        } catch (IOException | InterruptedException e) {
-            System.err.println("[BŁĄD KRYTYCZNY] Wyjątek podczas wykonania backupu: " + e.getMessage());
-            Thread.currentThread().interrupt();
+            log.info("ROZPOCZĘTO TWORZENIE BACKUPU BAZY DANYCH");
+            jdbcTemplate.execute(sql);
+            log.info("[BACKUP UDANY] Pomyślnie utworzono backup bazy. Plik znajdziesz w folderze backups: {}", fileName);
+        } catch (Exception e) {
+            log.error("[BACKUP NIEUDANY] Błąd podczas tworzenia backupu: {}", e.getMessage());
         }
     }
 }

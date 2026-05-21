@@ -11,6 +11,7 @@ services:
       MSSQL_PID: "Developer"
     volumes:
       - mssql-data:/var/opt/mssql
+      - ./backups:/var/opt/mssql/backups
     # Docker będzie sprawdzał, czy baza wstała i jest gotowa
     healthcheck:
       test: ["CMD", "/opt/mssql-tools18/bin/sqlcmd", "-S", "localhost", "-U", "sa", "-P", "Your_Strong_Password123!", "-C", "-Q", "SELECT 1"]
