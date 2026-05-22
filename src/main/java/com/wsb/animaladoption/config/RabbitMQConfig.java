@@ -9,11 +9,16 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class RabbitMQConfig {
     public static final String EXCHANGE_EMAIL = "exchange.email";
+
     public static final String QUEUE_REGISTRATION = "queue.email.registration";
     public static final String ROUTING_KEY_REGISTRATION = "routing.key.registration";
+
     public static final String QUEUE_CHAT = "chat.queue";
     public static final String EXCHANGE_CHAT = "chat.exchange";
     public static final String ROUTING_KEY_CHAT = "chat.routing.key";
+
+    public static final String QUEUE_ADOPTION_FORM = "queue.email.adoption_form";
+    public static final String ROUTING_KEY_ADOPTION_FORM = "routing.key.adoption_form";
 
     @Bean
     public Queue chatQueue() {
@@ -43,6 +48,16 @@ public class RabbitMQConfig {
     @Bean
     public Binding bindingRegistration(Queue registrationQueue, TopicExchange emailExchange) {
         return BindingBuilder.bind(registrationQueue).to(emailExchange).with(ROUTING_KEY_REGISTRATION);
+    }
+
+    @Bean
+    public Queue adoptionFormQueue() {
+        return new Queue(QUEUE_ADOPTION_FORM, true);
+    }
+
+    @Bean
+    public Binding bindingAdoptionForm(Queue adoptionFormQueue, TopicExchange emailExchange) {
+        return BindingBuilder.bind(adoptionFormQueue).to(emailExchange).with(ROUTING_KEY_ADOPTION_FORM);
     }
 
     @Bean

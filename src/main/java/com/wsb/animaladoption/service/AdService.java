@@ -1,13 +1,17 @@
 package com.wsb.animaladoption.service;
 
+import com.wsb.animaladoption.config.RabbitMQConfig;
 import com.wsb.animaladoption.dto.AdCreateDto;
+import com.wsb.animaladoption.dto.AdoptionFormDto;
 import com.wsb.animaladoption.enums.AdStatusEnum;
+import com.wsb.animaladoption.event.AdoptionFormEvent;
 import com.wsb.animaladoption.model.Ad;
 import com.wsb.animaladoption.model.Category;
 import com.wsb.animaladoption.model.User;
 import com.wsb.animaladoption.repository.AdRepository;
 import com.wsb.animaladoption.repository.CategoryRepository;
 import com.wsb.animaladoption.repository.UserRepository;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -21,6 +25,7 @@ public class AdService {
     private final CategoryRepository categoryRepository;
     private final UserRepository userRepository;
     private final FileStorageService fileStorageService;
+    private final RabbitTemplate rabbitTemplate;
 
     public List<Ad> findActiveAds(Long categoryId) {
         if (categoryId != null) {
@@ -105,10 +110,28 @@ public class AdService {
 
         adRepository.save(ad);
     }
+
     @Transactional
     public List<Ad> findActiveAdsByUserId(Long userId) {
         return adRepository.findAllByAuthorIdAndStatusOrderByCreatedAtDesc(userId, AdStatusEnum.ACTIVE);
     }
 
+    public void processAdoptionForm(Long adId, AdoptionFormDto dto) {
+        Ad ad = findById(adId);
 
+        AdoptionFormEvent event = new AdoptionFormEvent(
+                ad.getAuthor().getEmail(),
+                ad.getAuthor().getDisplayName(),
+                ad.getTitle(),
+                dto.getFirstName(),
+                dto.getLastName(),
+                dto.getAddress(),
+                dto.getCity(),
+                dto.getEmail(),
+                dto.getPhone(),
+                dto.getBirthYear()
+        );
+
+        rabbitTemplate.convertAndSend(RabbitMQConfig.EXCHANGE_EMAIL, RabbitMQConfig.ROUTING_KEY_ADOPTION_FORM, event);
+    }
 }
