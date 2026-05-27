@@ -1,14 +1,14 @@
 spring:
   datasource:
-    url: jdbc:sqlserver://localhost:1433;databaseName=animaladoption;encrypt=false
-    username: sa
-    password: Your_Strong_Password123!
+    url: jdbc:sqlserver://${DB_HOST:localhost}:${DB_PORT:1433};databaseName=${DB_NAME:animaladoption};encrypt=false
+    username: ${DB_USER}
+    password: ${DB_PASSWORD}
     driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver
   mail:
     host: smtp.gmail.com
     port: 587
-    username: #do zrobienia konto gmail
-    password: #hasło dla apki do smtp
+    username: ${MAIL_USERNAME}
+    password: ${MAIL_PASSWORD}
     properties:
       mail:
         smtp:
@@ -30,12 +30,20 @@ spring:
         dialect: org.hibernate.dialect.SQLServerDialect
 
   rabbitmq:
-    host: localhost
-    port: 5672
-    username: admin
-    password: admin
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USER}
+    password: ${RABBITMQ_PASSWORD}
 
 server:
-  port: 8080
+  port: ${SERVER_PORT:8080}
   tomcat:
     max-http-request-size: 50MB
+
+# Nasza własna konfiguracja aplikacji
+app:
+  security:
+    # Klucz do funkcji "Zapamiętaj mnie"
+    remember-me-key: ${REMEMBER_ME_KEY}
+    # Klucz do szyfrowania wrażliwych danych w bazie (zawsze 16, 24 lub 32 znaki dla AES)
+    crypto-key: ${CRYPTO_KEY}

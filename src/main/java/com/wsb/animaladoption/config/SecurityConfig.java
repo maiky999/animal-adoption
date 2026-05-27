@@ -1,5 +1,6 @@
 package com.wsb.animaladoption.config;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -12,6 +13,11 @@ import org.springframework.security.web.SecurityFilterChain;
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
+
+    // Pobieranie klucza ze zmiennych środowiskowych/application.yml
+    @Value("${app.security.remember-me-key}")
+    private String rememberMeKey;
+
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
@@ -32,7 +38,7 @@ public class SecurityConfig {
                         .logoutSuccessUrl("/?logout")
                         .permitAll()
                 ).rememberMe(remember -> remember
-                        .key("superTajnyKlucz")
+                        .key(rememberMeKey)
                         .rememberMeParameter("remember-me")
                         .tokenValiditySeconds(7 * 24 * 60 * 60)
                         .userDetailsService(userDetailsService)
