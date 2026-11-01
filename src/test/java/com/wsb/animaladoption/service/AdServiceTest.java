@@ -1,5 +1,6 @@
 package com.wsb.animaladoption.service;
 
+import com.wsb.animaladoption.service.impl.AdServiceImpl;
 import com.wsb.animaladoption.config.RabbitMQConfig;
 import com.wsb.animaladoption.dto.AdCreateDto;
 import com.wsb.animaladoption.dto.AdoptionFormDto;
@@ -48,7 +49,7 @@ class AdServiceTest {
     private RabbitTemplate rabbitTemplate;
 
     @InjectMocks
-    private AdService adService;
+    private AdServiceImpl adService;
 
     private User sampleUser;
     private Ad sampleAd;

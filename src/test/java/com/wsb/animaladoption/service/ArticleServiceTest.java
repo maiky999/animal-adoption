@@ -1,5 +1,6 @@
 package com.wsb.animaladoption.service;
 
+import com.wsb.animaladoption.service.impl.ArticleServiceImpl;
 import com.wsb.animaladoption.dto.ArticleCreateDto;
 import com.wsb.animaladoption.model.Article;
 import com.wsb.animaladoption.model.User;
@@ -35,7 +36,7 @@ class ArticleServiceTest {
     private FileStorageService fileStorageService;
 
     @InjectMocks
-    private ArticleService articleService;
+    private ArticleServiceImpl articleService;
 
     @Test
     @DisplayName("findAll - powinien zwrócić wszystkie artykuły")
