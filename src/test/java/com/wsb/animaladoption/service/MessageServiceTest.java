@@ -1,5 +1,6 @@
 package com.wsb.animaladoption.service;
 
+import com.wsb.animaladoption.service.impl.MessageServiceImpl;
 import com.wsb.animaladoption.config.RabbitMQConfig;
 import com.wsb.animaladoption.dto.ConversationPreviewDto;
 import com.wsb.animaladoption.event.ChatMessageEvent;
@@ -42,7 +43,7 @@ class MessageServiceTest {
     private RabbitTemplate rabbitTemplate;
 
     @InjectMocks
-    private MessageService messageService;
+    private MessageServiceImpl messageService;
 
     @Test
     @DisplayName("sendMessage - powinien opublikować zdarzenie na kolejce RabbitMQ")

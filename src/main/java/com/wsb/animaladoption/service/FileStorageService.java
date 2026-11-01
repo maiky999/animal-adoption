@@ -1,71 +1,26 @@
 package com.wsb.animaladoption.service;
 
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
-import java.util.stream.Collectors;
 
-@Slf4j
-@Service
-public class FileStorageService {
+/**
+ * Abstrakcja przechowywania plików przesyłanych przez użytkowników (zdjęcia ogłoszeń, avatary, grafiki artykułów).
+ * Obecna implementacja zapisuje pliki na dysku lokalnym, ale dzięki interfejsowi można ją podmienić
+ * np. na przechowywanie w chmurze bez zmian w pozostałych warstwach aplikacji.
+ */
+public interface FileStorageService {
 
-    @Value("${app.upload.dir:uploads}")
-    private String uploadDir;
+    /**
+     * Zapisuje plik.
+     *
+     * @return publiczny adres URL pliku lub {@code null}, gdy plik jest pusty
+     */
+    String storeFile(MultipartFile file);
 
-    public String storeFile(MultipartFile file) {
-        if (file == null || file.isEmpty()) {
-            return null;
-        }
+    /** Usuwa plik o podanym adresie URL (brak pliku nie jest błędem). */
+    void deleteFile(String fileUrl);
 
-        try {
-            String filename = UUID.randomUUID().toString() + "_" + file.getOriginalFilename();
-            Path targetLocation = Paths.get(uploadDir).toAbsolutePath().normalize().resolve(filename);
-            Files.createDirectories(targetLocation.getParent());
-            Files.copy(file.getInputStream(), targetLocation, StandardCopyOption.REPLACE_EXISTING);
-
-            return "/uploads/" + filename;
-        } catch (IOException e) {
-            throw new RuntimeException("Nie udało się zapisać pliku " + file.getOriginalFilename(), e);
-        }
-    }
-
-    public void deleteFile(String fileUrl) {
-        if (fileUrl == null || fileUrl.trim().isEmpty()) {
-            return;
-        }
-
-        try {
-            String fileName = fileUrl.substring(fileUrl.lastIndexOf("/") + 1);
-            Path filePath = Paths.get(uploadDir).toAbsolutePath().normalize().resolve(fileName);
-
-            boolean deleted = Files.deleteIfExists(filePath);
-            if (deleted) {
-                log.info("Usunięto stary plik: %s".formatted(fileName));
-            }
-        } catch (IOException e) {
-            log.error("Nie udało się usunąć pliku: %s".formatted(fileUrl));
-        }
-    }
-
-    public List<String> storeFiles(List<MultipartFile> files) {
-        if (files == null || files.isEmpty()) {
-            return new ArrayList<>();
-        }
-
-        return files.stream()
-                .filter(file -> !file.isEmpty())
-                .map(this::storeFile)
-                .collect(Collectors.toList());
-    }
-
+    /** Zapisuje wiele plików, pomijając puste, i zwraca ich adresy URL. */
+    List<String> storeFiles(List<MultipartFile> files);
 }

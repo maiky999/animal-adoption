@@ -1,0 +1,76 @@
+package com.wsb.animaladoption.service.impl;
+
+import com.wsb.animaladoption.service.FileStorageService;
+
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
+import java.util.stream.Collectors;
+
+@Slf4j
+@Service
+public class FileStorageServiceImpl implements FileStorageService {
+
+    @Value("${app.upload.dir:uploads}")
+    private String uploadDir;
+
+    @Override
+    public String storeFile(MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            return null;
+        }
+
+        try {
+            String filename = UUID.randomUUID().toString() + "_" + file.getOriginalFilename();
+            Path targetLocation = Paths.get(uploadDir).toAbsolutePath().normalize().resolve(filename);
+            Files.createDirectories(targetLocation.getParent());
+            Files.copy(file.getInputStream(), targetLocation, StandardCopyOption.REPLACE_EXISTING);
+
+            return "/uploads/" + filename;
+        } catch (IOException e) {
+            throw new RuntimeException("Nie udało się zapisać pliku " + file.getOriginalFilename(), e);
+        }
+    }
+
+    @Override
+    public void deleteFile(String fileUrl) {
+        if (fileUrl == null || fileUrl.trim().isEmpty()) {
+            return;
+        }
+
+        try {
+            String fileName = fileUrl.substring(fileUrl.lastIndexOf("/") + 1);
+            Path filePath = Paths.get(uploadDir).toAbsolutePath().normalize().resolve(fileName);
+
+            boolean deleted = Files.deleteIfExists(filePath);
+            if (deleted) {
+                log.info("Usunięto stary plik: %s".formatted(fileName));
+            }
+        } catch (IOException e) {
+            log.error("Nie udało się usunąć pliku: %s".formatted(fileUrl));
+        }
+    }
+
+    @Override
+    public List<String> storeFiles(List<MultipartFile> files) {
+        if (files == null || files.isEmpty()) {
+            return new ArrayList<>();
+        }
+
+        return files.stream()
+                .filter(file -> !file.isEmpty())
+                .map(this::storeFile)
+                .collect(Collectors.toList());
+    }
+
+}

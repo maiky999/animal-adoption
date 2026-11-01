@@ -1,5 +1,6 @@
 package com.wsb.animaladoption.service;
 
+import com.wsb.animaladoption.service.impl.UserServiceImpl;
 import com.wsb.animaladoption.config.RabbitMQConfig;
 import com.wsb.animaladoption.dto.UserPasswordUpdateDto;
 import com.wsb.animaladoption.dto.UserRegistrationDto;
@@ -47,7 +48,7 @@ class UserServiceTest {
     private FileStorageService fileStorageService;
 
     @InjectMocks
-    private UserService userService;
+    private UserServiceImpl userService;
 
     private User sampleUser;
 
