@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<parent>
+		<groupId>com.wsb</groupId>
+		<artifactId>animaladoption-parent</artifactId>
+		<version>0.0.1-SNAPSHOT</version>
+	</parent>
+
+	<!--
+		Moduł tłumaczeń (i18n). Biblioteka (jar) dostarczająca:
+		  - pliki tłumaczeń klucz-wartość (.properties) podzielone na paczki według obszarów aplikacji,
+		  - interfejs TranslationService i jego implementację opartą o Spring MessageSource,
+		  - autokonfigurację Spring Boot (MessageSource, wybór i przełączanie języka).
+		Aplikacja korzystająca z modułu wystarczy, że doda go jako zależność.
+	-->
+	<artifactId>animaladoption-translations</artifactId>
+	<packaging>jar</packaging>
+	<name>animal-adoption-translations</name>
+	<description>Moduł tłumaczeń (i18n) portalu do adopcji zwierząt</description>
+
+	<dependencies>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-autoconfigure</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework</groupId>
+			<artifactId>spring-webmvc</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>jakarta.servlet</groupId>
+			<artifactId>jakarta.servlet-api</artifactId>
+			<scope>provided</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-test</artifactId>
+			<scope>test</scope>
+		</dependency>
+	</dependencies>
+</project>
