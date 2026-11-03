@@ -12,7 +12,13 @@
 	<!--
 		Projekt nadrzędny (agregator). Nie zawiera kodu - spina moduły:
 		  - translations : osobny projekt z tłumaczeniami (i18n) i serwisem TranslationService
-		  - app          : właściwa aplikacja webowa (portal Łapka), zależna od modułu translations
+		  - domain       : warstwa danych - encje JPA, enumy, repozytoria, wyjątki domenowe
+		  - core         : logika biznesowa - serwisy, DTO, zdarzenia i kolejki RabbitMQ
+		  - web          : aplikacja webowa (portal Łapka) - kontrolery, widoki, konfiguracja, klasa startowa
+
+		Zależności między modułami idą tylko w jedną stronę:  web -> core -> domain
+		Maven pilnuje tego podczas kompilacji - np. serwis z modułu core nie może użyć kontrolera z web,
+		bo core nie ma modułu web w swoich zależnościach.
 	-->
 	<groupId>com.wsb</groupId>
 	<artifactId>animaladoption-parent</artifactId>
@@ -23,7 +29,9 @@
 
 	<modules>
 		<module>translations</module>
-		<module>app</module>
+		<module>domain</module>
+		<module>core</module>
+		<module>web</module>
 	</modules>
 
 	<properties>
@@ -35,6 +43,16 @@
 			<dependency>
 				<groupId>com.wsb</groupId>
 				<artifactId>animaladoption-translations</artifactId>
+				<version>${project.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>com.wsb</groupId>
+				<artifactId>animaladoption-domain</artifactId>
+				<version>${project.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>com.wsb</groupId>
+				<artifactId>animaladoption-core</artifactId>
 				<version>${project.version}</version>
 			</dependency>
 		</dependencies>
