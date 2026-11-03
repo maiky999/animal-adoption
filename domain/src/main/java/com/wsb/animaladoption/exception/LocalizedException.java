@@ -3,13 +3,13 @@ package com.wsb.animaladoption.exception;
 import org.springframework.context.MessageSourceResolvable;
 
 /**
- * Wyjątek biznesowy, którego komunikat jest pokazywany użytkownikowi.
+ * Business exception whose message is shown to the user.
  * <p>
- * Zamiast gotowego zdania przechowuje klucz tłumaczenia (np. {@code profile.error.wrongPassword}).
- * Dzięki temu warstwa serwisów nie zależy od języka użytkownika - tekst jest tłumaczony dopiero w widoku
- * lub przez {@link com.wsb.translations.TranslationService#get(MessageSourceResolvable)}.
+ * Instead of a ready-made sentence it stores a translation key (e.g. {@code profile.error.wrongPassword}).
+ * This way the service layer does not depend on the user's language - the text is translated only in the view
+ * or by {@link com.wsb.translations.TranslationService#get(MessageSourceResolvable)}.
  * <p>
- * Dziedziczy po {@link IllegalArgumentException}, więc zachowuje zgodność z dotychczasową obsługą błędów.
+ * Extends {@link IllegalArgumentException}, so it stays compatible with the existing error handling.
  */
 public class LocalizedException extends IllegalArgumentException implements MessageSourceResolvable {
     private final String messageKey;

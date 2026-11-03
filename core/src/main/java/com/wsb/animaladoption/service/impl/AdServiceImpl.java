@@ -144,7 +144,7 @@ public class AdServiceImpl implements AdService {
                 dto.getEmail(),
                 dto.getPhone(),
                 dto.getBirthYear(),
-                // Odbiorcą jest organizacja, której języka nie znamy - e-mail wysyłamy w języku domyślnym
+                // The recipient is an organization whose language we don't know - the email is sent in the default language
                 translationService.getDefaultLocale().toLanguageTag()
         );
 

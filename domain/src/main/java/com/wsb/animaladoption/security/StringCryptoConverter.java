@@ -12,20 +12,20 @@ import java.util.Arrays;
 import java.util.Base64;
 
 /**
- * Konwerter JPA do szyfrowania danych tekstowych w bazie danych w celu zwiększenia bezpieczeństwa
- * Działa jak filtr/adapter, tzn. przed zapisem do bazy szyfruje tekst, a przy odczycie go deszyfruje
+ * JPA converter that encrypts text data in the database to improve security.
+ * It works like a filter/adapter, i.e. it encrypts the text before saving it to the database and decrypts it when reading
  */
 @Component
 @Converter
 public class StringCryptoConverter implements AttributeConverter<String, String> {
     private static final String ALGORITHM = "AES";
 
-    // Pobieranie klucza z konfiguracji
+    // Reading the key from the configuration
     @Value("${app.security.crypto-key}")
     private String secretKeyString;
 
     /**
-     * Tu się dzieje cała magia szyfrowania, zamiana czystego tekstu na zaszyfrowany ciąg Base64
+     * This is where the encryption happens: plain text is turned into an encrypted Base64 string
      */
     private byte[] getValidAesKey() {
         byte[] key = secretKeyString.getBytes(StandardCharsets.UTF_8);

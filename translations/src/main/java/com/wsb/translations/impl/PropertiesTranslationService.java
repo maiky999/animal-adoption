@@ -10,11 +10,11 @@ import java.util.List;
 import java.util.Locale;
 
 /**
- * Implementacja {@link TranslationService} oparta o Spring {@link MessageSource},
- * który czyta tłumaczenia z plików {@code i18n/<paczka>/messages[_jezyk].properties}.
+ * {@link TranslationService} implementation based on Spring {@link MessageSource},
+ * which reads translations from {@code i18n/<bundle>/messages[_language].properties} files.
  * <p>
- * Język bieżącego żądania pobierany jest z {@link LocaleContextHolder}, który Spring MVC
- * ustawia na podstawie {@link org.springframework.web.servlet.LocaleResolver} (ciasteczko / nagłówek przeglądarki).
+ * The language of the current request is taken from {@link LocaleContextHolder}, which Spring MVC
+ * sets based on the {@link org.springframework.web.servlet.LocaleResolver} (cookie / browser header).
  */
 public class PropertiesTranslationService implements TranslationService {
     private final MessageSource messageSource;

@@ -40,10 +40,10 @@ server:
   tomcat:
     max-http-request-size: 50MB
 
-# Nasza własna konfiguracja aplikacji
+# Our own application configuration
 app:
   security:
-    # Klucz do funkcji "Zapamiętaj mnie"
+    # Key for the "Remember me" feature
     remember-me-key: ${REMEMBER_ME_KEY}
-    # Klucz do szyfrowania wrażliwych danych w bazie (zawsze 16, 24 lub 32 znaki dla AES)
+    # Key for encrypting sensitive data in the database (always 16, 24 or 32 characters for AES)
     crypto-key: ${CRYPTO_KEY}

@@ -73,7 +73,7 @@ class UserServiceTest {
     }
 
     @Test
-    @DisplayName("Powinien poprawnie zarejestrować użytkownika i wysłać event rejestracji")
+    @DisplayName("Should register the user and send a registration event")
     void shouldRegisterNewUser() {
         UserRegistrationDto dto = new UserRegistrationDto();
         dto.setEmail("nowy@wsb.pl");
@@ -99,12 +99,12 @@ class UserServiceTest {
                 eq(RabbitMQConfig.ROUTING_KEY_REGISTRATION),
                 eventCaptor.capture()
         );
-        // E-mail weryfikacyjny ma zostać wysłany w języku, w którym użytkownik się rejestrował
+        // The verification email should be sent in the language the user registered in
         assertEquals("en", eventCaptor.getValue().getLanguageTag());
     }
 
     @Test
-    @DisplayName("Powinien zweryfikować email gdy token jest ważny")
+    @DisplayName("Should verify the email when the token is valid")
     void shouldVerifyEmailSuccessfully() {
         String tokenStr = "valid-token-123";
         VerificationToken token = new VerificationToken(tokenStr, sampleUser);
@@ -121,7 +121,7 @@ class UserServiceTest {
     }
 
     @Test
-    @DisplayName("Nie powinien zweryfikować emaila gdy token wygasł")
+    @DisplayName("Should not verify the email when the token has expired")
     void shouldNotVerifyEmailWhenTokenExpired() {
         String tokenStr = "expired-token-123";
         VerificationToken token = new VerificationToken(tokenStr, sampleUser);
@@ -138,7 +138,7 @@ class UserServiceTest {
     }
 
     @Test
-    @DisplayName("Powinien zmienić hasło użytkownika gdy obecne hasło jest poprawne")
+    @DisplayName("Should change the user's password when the current password is correct")
     void shouldChangeUserPassword() {
         UserPasswordUpdateDto dto = new UserPasswordUpdateDto();
         dto.setCurrentPassword("stareHaslo");
@@ -155,7 +155,7 @@ class UserServiceTest {
     }
 
     @Test
-    @DisplayName("Powinien rzucić błąd przy zmianie hasła gdy obecne hasło się nie zgadza")
+    @DisplayName("Should throw an error when changing the password if the current password does not match")
     void shouldThrowExceptionWhenCurrentPasswordIsInvalid() {
         UserPasswordUpdateDto dto = new UserPasswordUpdateDto();
         dto.setCurrentPassword("zleHaslo");

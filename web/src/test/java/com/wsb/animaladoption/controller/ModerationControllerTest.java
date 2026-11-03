@@ -37,7 +37,7 @@ class ModerationControllerTest {
     }
 
     @Test
-    @DisplayName("GET /moderation/ads - powinien zwrócić widok moderation/list z listą oczekujących ogłoszeń")
+    @DisplayName("GET /moderation/ads - should return the moderation/list view with pending listings")
     void shouldShowPendingAds() throws Exception {
         Ad pendingAd = Ad.builder().id(1L).title("Oczekujący pies").build();
         when(adService.findPendingAds()).thenReturn(List.of(pendingAd));
@@ -51,7 +51,7 @@ class ModerationControllerTest {
     }
 
     @Test
-    @DisplayName("POST /moderation/ads/{id}/approve - powinien zatwierdzić ogłoszenie i przekierować do listy")
+    @DisplayName("POST /moderation/ads/{id}/approve - should approve the listing and redirect to the list")
     void shouldApproveAdAndRedirect() throws Exception {
         mockMvc.perform(post("/moderation/ads/10/approve"))
                 .andExpect(status().is3xxRedirection())
@@ -61,7 +61,7 @@ class ModerationControllerTest {
     }
 
     @Test
-    @DisplayName("POST /moderation/ads/{id}/reject - powinien odrzucić ogłoszenie i przekierować do listy")
+    @DisplayName("POST /moderation/ads/{id}/reject - should reject the listing and redirect to the list")
     void shouldRejectAdAndRedirect() throws Exception {
         mockMvc.perform(post("/moderation/ads/10/reject"))
                 .andExpect(status().is3xxRedirection())

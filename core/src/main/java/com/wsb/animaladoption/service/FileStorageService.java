@@ -5,22 +5,22 @@ import org.springframework.web.multipart.MultipartFile;
 import java.util.List;
 
 /**
- * Abstrakcja przechowywania plików przesyłanych przez użytkowników (zdjęcia ogłoszeń, avatary, grafiki artykułów).
- * Obecna implementacja zapisuje pliki na dysku lokalnym, ale dzięki interfejsowi można ją podmienić
- * np. na przechowywanie w chmurze bez zmian w pozostałych warstwach aplikacji.
+ * Abstraction for storing files uploaded by users (listing photos, avatars, article images).
+ * The current implementation saves files on the local disk, but thanks to the interface it can be replaced,
+ * e.g. with cloud storage, without changes in the other application layers.
  */
 public interface FileStorageService {
 
     /**
-     * Zapisuje plik.
+     * Saves a file.
      *
-     * @return publiczny adres URL pliku lub {@code null}, gdy plik jest pusty
+     * @return public URL of the file, or {@code null} if the file is empty
      */
     String storeFile(MultipartFile file);
 
-    /** Usuwa plik o podanym adresie URL (brak pliku nie jest błędem). */
+    /** Deletes the file with the given URL (a missing file is not an error). */
     void deleteFile(String fileUrl);
 
-    /** Zapisuje wiele plików, pomijając puste, i zwraca ich adresy URL. */
+    /** Saves multiple files, skipping empty ones, and returns their URLs. */
     List<String> storeFiles(List<MultipartFile> files);
 }

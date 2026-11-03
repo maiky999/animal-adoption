@@ -20,6 +20,6 @@ public class AdoptionFormEvent implements Serializable {
     private String contactEmail;
     private String phone;
     private Integer birthYear;
-    /** Język, w którym ma zostać wysłany e-mail (np. "pl", "en"). */
+    /** Language in which the email should be sent (e.g. "pl", "en"). */
     private String languageTag;
 }

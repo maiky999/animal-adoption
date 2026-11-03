@@ -6,7 +6,7 @@
   <div class="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
     <h2 class="text-3xl font-bold text-gray-800">[[#{ads.list.title}]]</h2>
 
-    <!-- Filtrowanie po kategoriach -->
+    <!-- Filtering by category -->
     <form th:action="@{/ads}" method="get" class="flex gap-2">
       <select name="categoryId" class="border border-gray-300 rounded-lg px-4 py-2 focus:ring-primary focus:border-primary" onchange="this.form.submit()">
         <option value="">[[#{ads.list.allCategories}]]</option>
@@ -19,14 +19,14 @@
     </form>
   </div>
 
-  <!-- Jeśli brak ogłoszeń -->
+  <!-- If there are no listings -->
   <div th:if="${#lists.isEmpty(ads)}" class="text-center py-20 bg-white rounded-2xl border border-dashed border-gray-300">
     <i class="ph ph-ghost text-6xl text-gray-300 mb-4"></i>
     <h3 class="text-xl font-medium text-gray-600">[[#{ads.list.empty.title}]]</h3>
     <p class="text-gray-400 mt-2">[[#{ads.list.empty.text}]]</p>
   </div>
 
-  <!-- Siatka Ogłoszeń -->
+  <!-- Listings grid -->
   <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6" th:unless="${#lists.isEmpty(ads)}">
 
     <article th:each="ad : ${ads}"
@@ -37,16 +37,16 @@
 
       <div class="relative h-48 overflow-hidden bg-gray-100 flex items-center justify-center">
 
-        <!-- Pokaż pierwsze zdjęcie z kolekcji jeśli kolekcja nie jest pusta -->
+        <!-- Show the first photo from the collection if it is not empty -->
         <img th:if="${ad.imageUrls != null and !ad.imageUrls.isEmpty()}"
              th:src="${ad.imageUrls[0]}"
              th:alt="#{common.image.animal}"
              class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
 
-        <!-- Placeholder, gdy brak zdjęć -->
+        <!-- Placeholder when there are no photos -->
         <i th:unless="${ad.imageUrls != null and !ad.imageUrls.isEmpty()}" class="ph ph-paw-print text-5xl text-gray-300"></i>
 
-        <!-- Placeholder na tag kategorii -->
+        <!-- Placeholder for the category tag -->
         <div class="absolute top-3 left-3 bg-white/90 backdrop-blur-sm px-2 py-1 rounded-md text-xs font-bold text-gray-700 shadow-sm" th:text="${@translationService.getOrDefault(ad.category.messageKey, ad.category.name)}">
           Kategoria
         </div>

@@ -56,7 +56,7 @@ class MessageControllerTest {
                 .roles("USER")
                 .build();
 
-        // Resolver wstrzykujący mockowanego UserDetails do @AuthenticationPrincipal
+        // Resolver that injects the mocked UserDetails into @AuthenticationPrincipal
         HandlerMethodArgumentResolver authPrincipalResolver = new HandlerMethodArgumentResolver() {
             @Override
             public boolean supportsParameter(MethodParameter parameter) {
@@ -76,7 +76,7 @@ class MessageControllerTest {
     }
 
     @Test
-    @DisplayName("GET /messages - powinien zwrócić skrzynkę odbiorczą z listą konwersacji")
+    @DisplayName("GET /messages - should return the inbox with the list of conversations")
     void shouldReturnInboxView() throws Exception {
         when(messageService.getUserConversations("test@example.com")).thenReturn(Collections.emptyList());
 
@@ -89,7 +89,7 @@ class MessageControllerTest {
     }
 
     @Test
-    @DisplayName("GET /messages/{adId}/{otherUserId} - powinien wyświetlić widok czatu z modelem")
+    @DisplayName("GET /messages/{adId}/{otherUserId} - should display the chat view with the model")
     void shouldReturnChatView() throws Exception {
         User me = User.builder().id(1L).email("test@example.com").displayName("Ja").build();
         User otherUser = User.builder().id(2L).email("other@example.com").displayName("Inny").build();
@@ -112,7 +112,7 @@ class MessageControllerTest {
     }
 
     @Test
-    @DisplayName("POST /messages/{adId}/{otherUserId} - powinien wysłać wiadomość i przekierować")
+    @DisplayName("POST /messages/{adId}/{otherUserId} - should send the message and redirect")
     void shouldSendMessageSuccessfully() throws Exception {
         mockMvc.perform(post("/messages/10/2")
                         .param("content", "Cześć, chętnie zaadoptuję pieska!"))
@@ -124,7 +124,7 @@ class MessageControllerTest {
     }
 
     @Test
-    @DisplayName("POST /messages/{adId}/{otherUserId} - nie powinien wysyłać pustej wiadomości")
+    @DisplayName("POST /messages/{adId}/{otherUserId} - should not send an empty message")
     void shouldNotSendEmptyMessage() throws Exception {
         mockMvc.perform(post("/messages/10/2")
                         .param("content", "   "))

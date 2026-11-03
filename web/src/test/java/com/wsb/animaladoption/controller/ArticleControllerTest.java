@@ -35,7 +35,7 @@ class ArticleControllerTest {
     }
 
     @Test
-    @DisplayName("GET /articles - powinien zwrócić widok listy artykułów z modelem")
+    @DisplayName("GET /articles - should return the article list view with the model")
     void shouldReturnArticleListView() throws Exception {
         when(articleService.findAll()).thenReturn(Collections.emptyList());
 
@@ -48,7 +48,7 @@ class ArticleControllerTest {
     }
 
     @Test
-    @DisplayName("GET /articles/{id} - powinien zwrócić widok szczegółów artykułu")
+    @DisplayName("GET /articles/{id} - should return the article details view")
     void shouldReturnArticleView() throws Exception {
         Article article = Article.builder().id(1L).title("Zasady adopcji").build();
         when(articleService.findById(1L)).thenReturn(article);

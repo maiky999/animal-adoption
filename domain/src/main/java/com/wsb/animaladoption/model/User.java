@@ -31,7 +31,7 @@ public class User {
     private String displayName;
 
     @Convert(converter = StringCryptoConverter.class)
-    @Column(nullable = false, length = 100) // zwiększyłem length, bo za szyfrowany tekst będzie dłuższy
+    @Column(nullable = false, length = 100) // length increased because the encrypted text will be longer
     private String mobile;
 
     @Enumerated(EnumType.STRING)

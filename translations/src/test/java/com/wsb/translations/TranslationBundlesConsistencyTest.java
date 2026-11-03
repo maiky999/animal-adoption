@@ -22,14 +22,14 @@ import java.util.TreeSet;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Pilnuje spójności plików tłumaczeń - łatwo zapomnieć o dodaniu klucza w jednym z języków.
+ * Keeps the translation files consistent - it is easy to forget to add a key in one of the languages.
  */
 class TranslationBundlesConsistencyTest {
 
     private final PathMatchingResourcePatternResolver resolver = new PathMatchingResourcePatternResolver();
 
     @Test
-    @DisplayName("Każda paczka powinna mieć te same klucze we wszystkich obsługiwanych językach")
+    @DisplayName("Each bundle should have the same keys in all supported languages")
     void everyBundleShouldHaveSameKeysInAllLanguages() throws IOException {
         List<String> problems = new ArrayList<>();
 
@@ -38,7 +38,7 @@ class TranslationBundlesConsistencyTest {
             for (Locale locale : new TranslationProperties().getSupportedLocales()) {
                 Resource translated = base.createRelative("messages_" + locale.getLanguage() + ".properties");
                 if (!translated.exists()) {
-                    // plik bazowy pełni rolę języka domyślnego (polskiego)
+                    // the base file serves as the default language (Polish)
                     continue;
                 }
                 Set<String> translatedKeys = load(translated).stringPropertyNames();
@@ -57,7 +57,7 @@ class TranslationBundlesConsistencyTest {
     }
 
     @Test
-    @DisplayName("Każdy obsługiwany język inny niż domyślny powinien mieć własny plik w każdej paczce")
+    @DisplayName("Each supported non-default language should have its own file in every bundle")
     void everyNonDefaultLanguageShouldHaveFile() throws IOException {
         TranslationProperties properties = new TranslationProperties();
         List<String> missingFiles = new ArrayList<>();
@@ -75,7 +75,7 @@ class TranslationBundlesConsistencyTest {
     }
 
     @Test
-    @DisplayName("Ten sam klucz nie powinien być zdefiniowany w dwóch różnych paczkach")
+    @DisplayName("The same key should not be defined in two different bundles")
     void keysShouldBeUniqueAcrossBundles() throws IOException {
         Map<String, String> keyToBundle = new HashMap<>();
         List<String> duplicates = new ArrayList<>();
@@ -91,7 +91,7 @@ class TranslationBundlesConsistencyTest {
     }
 
     @Test
-    @DisplayName("Żadne tłumaczenie nie powinno być puste")
+    @DisplayName("No translation should be empty")
     void translationsShouldNotBeBlank() throws IOException {
         List<String> blank = new ArrayList<>();
         for (Resource resource : resolver.getResources("classpath*:i18n/*/messages*.properties")) {

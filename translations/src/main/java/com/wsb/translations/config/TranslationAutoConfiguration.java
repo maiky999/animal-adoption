@@ -29,12 +29,12 @@ import java.util.Locale;
 import java.util.Objects;
 
 /**
- * Autokonfiguracja modułu tłumaczeń. Spring Boot ładuje ją automatycznie, gdy moduł jest na classpath
- * (rejestracja w {@code META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports}),
- * więc aplikacja nie musi niczego konfigurować ręcznie.
+ * Auto-configuration of the translations module. Spring Boot loads it automatically when the module is on the classpath
+ * (registered in {@code META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports}),
+ * so the application does not have to configure anything manually.
  * <p>
- * Uruchamiana jest przed autokonfiguracjami Spring Boota, dzięki czemu nasze beany {@code messageSource}
- * i {@code localeResolver} zastępują domyślne.
+ * It runs before Spring Boot's auto-configurations, so our {@code messageSource}
+ * and {@code localeResolver} beans replace the default ones.
  */
 @AutoConfiguration(beforeName = {
         "org.springframework.boot.autoconfigure.context.MessageSourceAutoConfiguration",
@@ -44,8 +44,8 @@ import java.util.Objects;
 public class TranslationAutoConfiguration {
 
     /**
-     * Źródło tłumaczeń. Paczki są wyszukiwane automatycznie - każdy katalog {@code i18n/<paczka>/}
-     * z plikiem {@code messages.properties} staje się osobną paczką. Dodanie nowej paczki nie wymaga zmian w kodzie.
+     * Translation source. Bundles are discovered automatically - every {@code i18n/<bundle>/} directory
+     * with a {@code messages.properties} file becomes a separate bundle. Adding a new bundle requires no code changes.
      */
     @Bean(name = "messageSource")
     @ConditionalOnMissingBean(name = "messageSource")
@@ -53,7 +53,7 @@ public class TranslationAutoConfiguration {
         ReloadableResourceBundleMessageSource messageSource = new ReloadableResourceBundleMessageSource();
         messageSource.setBasenames(findBundleBasenames(properties.getBundleLocationPattern()));
         messageSource.setDefaultEncoding(StandardCharsets.UTF_8.name());
-        // Brak pliku dla danego języka -> plik bazowy (polski), a nie język systemu operacyjnego serwera
+        // No file for the given language -> the base file (Polish), not the server operating system's language
         messageSource.setFallbackToSystemLocale(false);
         return messageSource;
     }
@@ -65,8 +65,8 @@ public class TranslationAutoConfiguration {
     }
 
     /**
-     * Zamienia pliki znalezione wg wzorca (np. {@code .../i18n/ads/messages.properties})
-     * na nazwy bazowe paczek dla MessageSource (np. {@code classpath:i18n/ads/messages}).
+     * Converts files found by the pattern (e.g. {@code .../i18n/ads/messages.properties})
+     * into bundle base names for MessageSource (e.g. {@code classpath:i18n/ads/messages}).
      */
     static String[] findBundleBasenames(String locationPattern) {
         try {
@@ -96,7 +96,7 @@ public class TranslationAutoConfiguration {
     }
 
     /**
-     * Konfiguracja webowa: wybór języka dla żądania i jego przełączanie parametrem {@code ?lang=}.
+     * Web configuration: choosing the language for a request and switching it with the {@code ?lang=} parameter.
      */
     @Configuration(proxyBeanMethods = false)
     @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
@@ -108,8 +108,8 @@ public class TranslationAutoConfiguration {
         }
 
         /**
-         * Język żądania: najpierw ciasteczko z wybranym językiem, potem nagłówek przeglądarki
-         * (Accept-Language), a gdy żaden obsługiwany język nie pasuje - język domyślny.
+         * Request language: first the cookie with the selected language, then the browser header
+         * (Accept-Language), and if no supported language matches - the default language.
          */
         @Bean(name = "localeResolver")
         @ConditionalOnMissingBean(name = "localeResolver")
@@ -138,8 +138,8 @@ public class TranslationAutoConfiguration {
     }
 
     /**
-     * Interceptor zmieniający język po parametrze URL, który akceptuje wyłącznie obsługiwane języki
-     * (np. {@code ?lang=de} przy obsłudze tylko pl/en przywraca język domyślny).
+     * Interceptor that changes the language based on a URL parameter and accepts only supported languages
+     * (e.g. {@code ?lang=de} when only pl/en are supported falls back to the default language).
      */
     static class SupportedLocaleChangeInterceptor extends LocaleChangeInterceptor {
         private final TranslationProperties properties;

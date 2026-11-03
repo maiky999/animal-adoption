@@ -37,7 +37,7 @@ class AuthControllerTest {
     }
 
     @Test
-    @DisplayName("GET /login - powinien zwrócić widok logowania")
+    @DisplayName("GET /login - should return the login view")
     void shouldReturnLoginView() throws Exception {
         mockMvc.perform(get("/login"))
                 .andExpect(status().isOk())
@@ -45,7 +45,7 @@ class AuthControllerTest {
     }
 
     @Test
-    @DisplayName("GET /register - powinien zwrócić widok rejestracji z pustym DTO w modelu")
+    @DisplayName("GET /register - should return the registration view with an empty DTO in the model")
     void shouldReturnRegisterViewWithDto() throws Exception {
         mockMvc.perform(get("/register"))
                 .andExpect(status().isOk())
@@ -54,7 +54,7 @@ class AuthControllerTest {
     }
 
     @Test
-    @DisplayName("GET /verify - powinien przekierować do logowania z komunikatem sukcesu")
+    @DisplayName("GET /verify - should redirect to login with a success message")
     void shouldVerifyEmailSuccessfully() throws Exception {
         when(userService.verifyEmail("valid-token")).thenReturn(true);
 
@@ -67,7 +67,7 @@ class AuthControllerTest {
     }
 
     @Test
-    @DisplayName("GET /verify - powinien przekierować do logowania z komunikatem błędu, gdy token nieprawidłowy")
+    @DisplayName("GET /verify - should redirect to login with an error message when the token is invalid")
     void shouldFailEmailVerificationWhenTokenInvalid() throws Exception {
         when(userService.verifyEmail("invalid-token")).thenReturn(false);
 
@@ -80,7 +80,7 @@ class AuthControllerTest {
     }
 
     @Test
-    @DisplayName("POST /register - powinien zarejestrować użytkownika i przekierować do /login?success")
+    @DisplayName("POST /register - should register the user and redirect to /login?success")
     void shouldRegisterUserSuccessfully() throws Exception {
         mockMvc.perform(post("/register")
                         .param("email", "jan.kowalski@example.com")
@@ -100,7 +100,7 @@ class AuthControllerTest {
     }
 
     @Test
-    @DisplayName("POST /register - powinien zwrócić formularz, gdy dane nie przejdą walidacji")
+    @DisplayName("POST /register - should return the form when the data fails validation")
     void shouldReturnRegisterViewWhenValidationFails() throws Exception {
         mockMvc.perform(post("/register")
                         .param("email", "niepoprawny-email")
@@ -117,7 +117,7 @@ class AuthControllerTest {
     }
 
     @Test
-    @DisplayName("POST /register - powinien obsłużyć IllegalArgumentException i odrzucić pole email")
+    @DisplayName("POST /register - should handle IllegalArgumentException and reject the email field")
     void shouldHandleIllegalArgumentExceptionOnRegister() throws Exception {
         doThrow(new IllegalArgumentException("Użytkownik o podanym adresie email już istnieje."))
                 .when(userService).registerNewUser(any(UserRegistrationDto.class));
@@ -136,7 +136,7 @@ class AuthControllerTest {
     }
 
     @Test
-    @DisplayName("POST /register - powinien obsłużyć DataIntegrityViolationException przy kolizji bazy")
+    @DisplayName("POST /register - should handle DataIntegrityViolationException on a database conflict")
     void shouldHandleDataIntegrityViolationExceptionOnRegister() throws Exception {
         doThrow(new DataIntegrityViolationException("Duplicate key"))
                 .when(userService).registerNewUser(any(UserRegistrationDto.class));

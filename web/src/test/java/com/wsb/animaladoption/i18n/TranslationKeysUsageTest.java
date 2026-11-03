@@ -23,19 +23,19 @@ import java.util.stream.Stream;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Sprawdza, czy każdy klucz tłumaczenia użyty w aplikacji (szablony Thymeleaf, adnotacje walidacji,
- * komunikaty w kontrolerach i wyjątkach) istnieje w module tłumaczeń - w każdym obsługiwanym języku.
- * Literówka w kluczu zostanie wykryta przez test, a nie dopiero przez użytkownika ("??klucz_pl??").
+ * Checks whether every translation key used in the application (Thymeleaf templates, validation annotations,
+ * messages in controllers and exceptions) exists in the translations module - in every supported language.
+ * A typo in a key is caught by the test, not only by the user ("??key_pl??").
  */
 class TranslationKeysUsageTest {
 
-    /** #{klucz} w szablonach (pomija dynamiczne #{${...}}). */
+    /** #{key} in templates (skips dynamic #{${...}}). */
     private static final Pattern TEMPLATE_KEY = Pattern.compile("#\\{([a-zA-Z][\\w.]*)}");
-    /** #messages.msg('klucz') w wyrażeniach Thymeleaf. */
+    /** #messages.msg('key') in Thymeleaf expressions. */
     private static final Pattern TEMPLATE_MSG_KEY = Pattern.compile("#messages\\.msg\\('([\\w.]+)'\\)");
-    /** "{klucz}" w adnotacjach walidacji. */
+    /** "{key}" in validation annotations. */
     private static final Pattern VALIDATION_KEY = Pattern.compile("\"\\{([a-zA-Z][\\w.]*)}\"");
-    /** Klucze przekazywane jako komunikaty flash, kody błędów i klucze wyjątków. */
+    /** Keys passed as flash messages, error codes and exception keys. */
     private static final Pattern JAVA_KEY = Pattern.compile(
             "\"((?:ads|adoption|verify|profile|articles|validation|email)\\.[\\w.]+)\"");
 
@@ -43,12 +43,12 @@ class TranslationKeysUsageTest {
             new TranslationAutoConfiguration().messageSource(new TranslationProperties());
 
     @Test
-    @DisplayName("Wszystkie klucze użyte w szablonach i kodzie powinny istnieć w każdym języku")
+    @DisplayName("All keys used in templates and code should exist in every language")
     void allUsedKeysShouldExist() throws IOException {
         Set<String> keys = new TreeSet<>();
         keys.addAll(findKeys(Path.of("src/main/resources/templates"), ".html", TEMPLATE_KEY, TEMPLATE_MSG_KEY));
-        // Test uruchamia się w katalogu modułu web/ - kod Javy z kluczami leży też w sąsiednich modułach
-        // core/ (DTO z walidacją, serwisy) i domain/ (wyjątki), więc skanujemy wszystkie trzy.
+        // The test runs in the web/ module directory - Java code with keys also lives in the sibling modules
+        // core/ (DTOs with validation, services) and domain/ (exceptions), so we scan all three.
         for (String module : List.of(".", "../core", "../domain")) {
             keys.addAll(findKeys(Path.of(module, "src/main/java"), ".java", VALIDATION_KEY, JAVA_KEY));
         }

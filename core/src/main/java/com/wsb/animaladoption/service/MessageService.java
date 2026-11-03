@@ -7,22 +7,22 @@ import com.wsb.animaladoption.model.Message;
 import java.util.List;
 
 /**
- * Logika biznesowa czatu między użytkownikami w kontekście ogłoszenia.
+ * Business logic for chat between users in the context of a listing.
  */
 public interface MessageService {
 
-    /** Wysyła wiadomość asynchronicznie - trafia ona do kolejki, a zapis do bazy odbywa się w tle. */
+    /** Sends a message asynchronously - it goes to the queue and is saved to the database in the background. */
     void sendMessage(String senderEmail, Long receiverId, Long adId, String content);
 
-    /** Zapisuje w bazie wiadomość odebraną z kolejki. */
+    /** Saves a message received from the queue to the database. */
     void saveMessageToDatabase(ChatMessageEvent event);
 
-    /** Zwraca rozmowę dwóch użytkowników dotyczącą ogłoszenia i oznacza odebrane wiadomości jako przeczytane. */
+    /** Returns the conversation between two users about a listing and marks received messages as read. */
     List<Message> getConversationAndMarkAsRead(String currentUserEmail, Long otherUserId, Long adId);
 
-    /** Zwraca listę rozmów użytkownika (ostatnia wiadomość i liczba nieprzeczytanych). */
+    /** Returns the user's conversations (last message and number of unread messages). */
     List<ConversationPreviewDto> getUserConversations(String email);
 
-    /** Zwraca łączną liczbę nieprzeczytanych wiadomości użytkownika. */
+    /** Returns the user's total number of unread messages. */
     long getUnreadMessagesCount(String email);
 }

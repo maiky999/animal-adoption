@@ -3,7 +3,7 @@
 <body>
 <main class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full flex-grow flex flex-col h-[calc(100vh-64px)]">
 
-    <!-- Nagłówek czatu -->
+    <!-- Chat header -->
     <div class="bg-white rounded-t-2xl shadow-sm border border-gray-100 p-4 flex items-center justify-between z-10">
         <div class="flex items-center min-w-0">
             <a th:href="@{/messages}" class="mr-4 text-gray-400 hover:text-primary transition">
@@ -22,20 +22,20 @@
             </a>
         </div>
 
-        <!-- Link do ogłoszenia -->
+        <!-- Link to the listing -->
         <a href="#" th:hx-get="@{/ads/{id}(id=${ad.id})}" hx-target="#modal-container" hx-swap="innerHTML" class="ml-4 flex-shrink-0 bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-700 py-1.5 px-3 rounded-lg text-xs font-bold transition flex items-center whitespace-nowrap">
             <i class="ph ph-paw-print mr-1"></i> [[#{chat.ad}]]
         </a>
     </div>
 
-    <!-- Obszar wiadomości -->
+    <!-- Messages area -->
     <div id="chat-container" class="bg-gray-50 flex-grow border-l border-r border-gray-100 p-4 overflow-y-auto flex flex-col space-y-4">
 
         <div th:if="${#lists.isEmpty(messages)}" class="m-auto text-center text-gray-400 text-sm bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
             [[#{chat.start.line1}]]<br>[[#{chat.start.line2}]]
         </div>
 
-        <!-- Pojedyncza wiadomość -->
+        <!-- Single message -->
         <div th:each="msg : ${messages}" class="flex w-full" th:classappend="${msg.sender.id == me.id} ? 'justify-end' : 'justify-start'">
 
             <div class="max-w-[75%] md:max-w-[60%] flex flex-col">
@@ -43,7 +43,7 @@
                      th:classappend="${msg.sender.id == me.id} ? 'bg-primary text-white rounded-tr-sm' : 'bg-white text-gray-800 border border-gray-100 rounded-tl-sm'">
                     <p class="text-sm whitespace-pre-wrap leading-relaxed" th:text="${msg.content}">Treść wiadomości...</p>
                 </div>
-                <!-- Data i godzina -->
+                <!-- Date and time -->
                 <span class="text-[10px] text-gray-400 mt-1 px-1"
                       th:classappend="${msg.sender.id == me.id} ? 'text-right' : 'text-left'"
                       th:text="${#temporals.format(msg.sentAt, 'dd.MM.yyyy HH:mm')}">14:30</span>
@@ -52,7 +52,7 @@
         </div>
     </div>
 
-    <!-- Formularz wysyłania (na dole) -->
+    <!-- Send form (at the bottom) -->
     <div class="bg-white rounded-b-2xl shadow-sm border border-gray-100 p-3">
         <form th:action="@{/messages/{adId}/{userId}(adId=${ad.id}, userId=${otherUser.id})}" method="post" class="flex items-end gap-2 relative">
                 <textarea name="content" rows="1" required th:placeholder="#{chat.placeholder}"
@@ -65,7 +65,7 @@
         </form>
     </div>
 
-    <!-- Skrypt przewijający czat na sam dół przy otwarciu -->
+    <!-- Script that scrolls the chat to the bottom on open -->
     <script>
             window.addEventListener('DOMContentLoaded', (event) => {
                 const container = document.getElementById('chat-container');

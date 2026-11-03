@@ -9,16 +9,16 @@
 	</parent>
 
 	<!--
-		Moduł tłumaczeń (i18n). Biblioteka (jar) dostarczająca:
-		  - pliki tłumaczeń klucz-wartość (.properties) podzielone na paczki według obszarów aplikacji,
-		  - interfejs TranslationService i jego implementację opartą o Spring MessageSource,
-		  - autokonfigurację Spring Boot (MessageSource, wybór i przełączanie języka).
-		Aplikacja korzystająca z modułu wystarczy, że doda go jako zależność.
+		Translations module (i18n). A library (jar) providing:
+		  - key-value translation files (.properties) split into bundles by application area,
+		  - the TranslationService interface and its implementation based on Spring MessageSource,
+		  - Spring Boot auto-configuration (MessageSource, choosing and switching the language).
+		An application using the module only needs to add it as a dependency.
 	-->
 	<artifactId>animaladoption-translations</artifactId>
 	<packaging>jar</packaging>
 	<name>animal-adoption-translations</name>
-	<description>Moduł tłumaczeń (i18n) portalu do adopcji zwierząt</description>
+	<description>Translations module (i18n) of the animal adoption portal</description>
 
 	<dependencies>
 		<dependency>

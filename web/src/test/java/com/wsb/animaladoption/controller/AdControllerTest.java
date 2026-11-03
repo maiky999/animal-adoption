@@ -50,7 +50,7 @@ class AdControllerTest {
 
     @BeforeEach
     void setUp() {
-        // Resolver gwarantujący poprawne wstrzykiwanie mockUser pod @AuthenticationPrincipal
+        // Resolver that ensures mockUser is correctly injected into @AuthenticationPrincipal
         HandlerMethodArgumentResolver authPrincipalResolver = new HandlerMethodArgumentResolver() {
             @Override
             public boolean supportsParameter(MethodParameter parameter) {
@@ -72,7 +72,7 @@ class AdControllerTest {
     }
 
     @Test
-    @DisplayName("GET /ads - powinien zwrócić listę ogłoszeń i widok ads/list")
+    @DisplayName("GET /ads - should return the list of listings and the ads/list view")
     void shouldReturnAdsListPage() throws Exception {
         when(adService.findActiveAds(null)).thenReturn(Collections.emptyList());
         when(adService.findAllCategories()).thenReturn(Collections.emptyList());
@@ -87,7 +87,7 @@ class AdControllerTest {
     }
 
     @Test
-    @DisplayName("GET /ads/{id} - powinien zwrócić fragment modala ze szczegółami ogłoszenia")
+    @DisplayName("GET /ads/{id} - should return the modal fragment with listing details")
     void shouldReturnAdDetailsModalFragment() throws Exception {
         Ad ad = Ad.builder()
                 .id(1L)
@@ -108,7 +108,7 @@ class AdControllerTest {
     }
 
     @Test
-    @DisplayName("GET /ads/new - powinien wyświetlić formularz dodawania ogłoszenia")
+    @DisplayName("GET /ads/new - should display the add listing form")
     void shouldShowCreateForm() throws Exception {
         when(adService.findAllCategories()).thenReturn(Collections.emptyList());
 
@@ -120,7 +120,7 @@ class AdControllerTest {
     }
 
     @Test
-    @DisplayName("POST /ads/new - powinien utworzyć ogłoszenie i przekierować do /my-ads")
+    @DisplayName("POST /ads/new - should create a listing and redirect to /my-ads")
     void shouldCreateAdAndRedirect() throws Exception {
         when(mockUser.getUsername()).thenReturn("autor@example.com");
 
@@ -137,7 +137,7 @@ class AdControllerTest {
     }
 
     @Test
-    @DisplayName("GET /ads/{id}/edit - powinien wyświetlić formularz edycji gdy użytkownik jest autorem")
+    @DisplayName("GET /ads/{id}/edit - should display the edit form when the user is the author")
     void shouldShowEditFormWhenUserIsAuthor() throws Exception {
         when(mockUser.getUsername()).thenReturn("autor@example.com");
 
@@ -165,7 +165,7 @@ class AdControllerTest {
     }
 
     @Test
-    @DisplayName("GET /ads/{id}/edit - powinien przekierować do /my-ads gdy zalogowany użytkownik nie jest autorem")
+    @DisplayName("GET /ads/{id}/edit - should redirect to /my-ads when the logged-in user is not the author")
     void shouldRedirectWhenUserIsNotAuthor() throws Exception {
         when(mockUser.getUsername()).thenReturn("obcy@example.com");
 
@@ -180,7 +180,7 @@ class AdControllerTest {
     }
 
     @Test
-    @DisplayName("POST /ads/{id}/adoption-form - powinien przetworzyć ankietę adopcyjną")
+    @DisplayName("POST /ads/{id}/adoption-form - should process the adoption questionnaire")
     void shouldProcessAdoptionFormSuccessfully() throws Exception {
         doNothing().when(adService).processAdoptionForm(eq(1L), any(AdoptionFormDto.class));
 

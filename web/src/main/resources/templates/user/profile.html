@@ -15,7 +15,7 @@
 
     <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
 
-        <!-- KARTA 1: DANE PODSTAWOWE -->
+        <!-- CARD 1: BASIC DETAILS -->
         <div class="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 flex flex-col">
             <h3 class="text-xl font-bold text-gray-800 mb-6 flex items-center">
                 <i class="ph-fill ph-user-circle text-primary text-2xl mr-2"></i> [[#{profile.contact.title}]]
@@ -25,7 +25,7 @@
                 <span th:text="#{${errorMessage}}"></span>
             </div>
 
-            <!-- NOWOŚĆ: enctype multipart/form-data do przesyłania plików -->
+            <!-- NEW: enctype multipart/form-data for file uploads -->
             <form th:action="@{/profile/info}" th:object="${profileDto}" method="post" enctype="multipart/form-data" class="space-y-4 flex-grow flex flex-col">
                 <div>
                     <label for="displayName" class="block text-sm font-medium text-gray-700 mb-1">[[#{profile.displayName}]]</label>
@@ -51,7 +51,7 @@
                     <p th:if="${#fields.hasErrors('mobile')}" th:errors="*{mobile}" class="text-red-500 text-xs mt-1"></p>
                 </div>
 
-                <!-- NOWE POLE: Opis Profilu -->
+                <!-- NEW FIELD: Profile description -->
                 <div>
                     <label for="description" class="block text-sm font-medium text-gray-700 mb-1">[[#{profile.description}]]</label>
                     <textarea id="description" th:field="*{description}" rows="3" th:placeholder="#{profile.description.placeholder}"
@@ -60,7 +60,7 @@
                     <p th:if="${#fields.hasErrors('description')}" th:errors="*{description}" class="text-red-500 text-xs mt-1"></p>
                 </div>
 
-                <!-- NOWE POLE: Zdjęcie profilowe -->
+                <!-- NEW FIELD: Profile picture -->
                 <div>
                     <label for="avatarFile" class="block text-sm font-medium text-gray-700 mb-1">[[#{profile.avatar}]]</label>
                     <input type="file" id="avatarFile" name="avatarFile" accept="image/*"
@@ -75,7 +75,7 @@
             </form>
         </div>
 
-        <!-- KARTA 2: ZMIANA HASŁA (bez zmian) -->
+        <!-- CARD 2: PASSWORD CHANGE (unchanged) -->
         <div class="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 flex flex-col">
             <h3 class="text-xl font-bold text-gray-800 mb-6 flex items-center">
                 <i class="ph-fill ph-lock-key text-gray-600 text-2xl mr-2"></i> [[#{profile.password.title}]]

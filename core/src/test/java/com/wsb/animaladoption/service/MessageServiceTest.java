@@ -46,7 +46,7 @@ class MessageServiceTest {
     private MessageServiceImpl messageService;
 
     @Test
-    @DisplayName("sendMessage - powinien opublikować zdarzenie na kolejce RabbitMQ")
+    @DisplayName("sendMessage - should publish an event to the RabbitMQ queue")
     void shouldPublishMessageEventToRabbitMQ() {
         // when
         messageService.sendMessage("sender@example.com", 2L, 10L, "Dzień dobry, czy piesek jest dostępny?");
@@ -67,7 +67,7 @@ class MessageServiceTest {
     }
 
     @Test
-    @DisplayName("saveMessageToDatabase - powinien poprawnie zapisać wiadomość w bazie")
+    @DisplayName("saveMessageToDatabase - should correctly save the message in the database")
     void shouldSaveMessageToDatabase() {
         // given
         ChatMessageEvent event = new ChatMessageEvent("sender@example.com", 2L, 10L, "Wiadomość testowa");
@@ -95,7 +95,7 @@ class MessageServiceTest {
     }
 
     @Test
-    @DisplayName("saveMessageToDatabase - powinien rzucić wyjątek gdy odbiorca nie istnieje")
+    @DisplayName("saveMessageToDatabase - should throw an exception when the recipient does not exist")
     void shouldThrowExceptionWhenReceiverNotFound() {
         ChatMessageEvent event = new ChatMessageEvent("sender@example.com", 99L, 10L, "Treść");
         User sender = User.builder().id(1L).email("sender@example.com").build();
@@ -111,7 +111,7 @@ class MessageServiceTest {
     }
 
     @Test
-    @DisplayName("getConversationAndMarkAsRead - powinien oznaczyć wiadomości jako przeczytane i zwrócić listę")
+    @DisplayName("getConversationAndMarkAsRead - should mark messages as read and return the list")
     void shouldGetConversationAndMarkAsRead() {
         // given
         User me = User.builder().id(1L).email("me@example.com").build();
@@ -129,7 +129,7 @@ class MessageServiceTest {
     }
 
     @Test
-    @DisplayName("getUserConversations - powinien pogrupować wiadomości w wątki i policzyć nieprzeczytane")
+    @DisplayName("getUserConversations - should group messages into threads and count unread ones")
     void shouldGroupConversationsAndCountUnread() {
         // given
         User me = User.builder().id(1L).email("me@example.com").build();
