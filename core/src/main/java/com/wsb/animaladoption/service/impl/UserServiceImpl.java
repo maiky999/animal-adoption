@@ -1,0 +1,135 @@
+package com.wsb.animaladoption.service.impl;
+
+import com.wsb.animaladoption.config.RabbitMQConfig;
+import com.wsb.animaladoption.dto.UserPasswordUpdateDto;
+import com.wsb.animaladoption.dto.UserProfileUpdateDto;
+import com.wsb.animaladoption.dto.UserRegistrationDto;
+import com.wsb.animaladoption.enums.RoleEnum;
+import com.wsb.animaladoption.event.RegistrationEvent;
+import com.wsb.animaladoption.exception.LocalizedException;
+import com.wsb.animaladoption.model.User;
+import com.wsb.animaladoption.model.VerificationToken;
+import com.wsb.animaladoption.repository.UserRepository;
+import com.wsb.animaladoption.repository.VerificationTokenRepository;
+import com.wsb.animaladoption.service.FileStorageService;
+import com.wsb.animaladoption.service.UserService;
+import com.wsb.translations.TranslationService;
+import org.springframework.transaction.annotation.Transactional;
+import lombok.RequiredArgsConstructor;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+
+import java.time.LocalDateTime;
+import java.util.Optional;
+import java.util.UUID;
+
+@Service
+@RequiredArgsConstructor
+public class UserServiceImpl implements UserService {
+    private final UserRepository userRepository;
+    private final VerificationTokenRepository tokenRepository;
+    private final PasswordEncoder passwordEncoder;
+    private final RabbitTemplate rabbitTemplate;
+    private final FileStorageService fileStorageService;
+    private final TranslationService translationService;
+
+    @Override
+    @Transactional
+    public User registerNewUser(UserRegistrationDto dto) {
+        User user = User.builder()
+                .email(dto.getEmail())
+                .passwordHash(passwordEncoder.encode(dto.getPassword()))
+                .displayName(dto.getDisplayName())
+                .mobile(dto.getMobile())
+                .role(RoleEnum.USER)
+                .userType(dto.getUserType())
+                .build();
+
+        userRepository.save(user);
+
+        String token = UUID.randomUUID().toString();
+        VerificationToken verificationToken = new VerificationToken(token, user);
+        tokenRepository.save(verificationToken);
+
+        RegistrationEvent event = new RegistrationEvent(user.getEmail(), token,
+                translationService.getCurrentLocale().toLanguageTag());
+        rabbitTemplate.convertAndSend(RabbitMQConfig.EXCHANGE_EMAIL, RabbitMQConfig.ROUTING_KEY_REGISTRATION, event);
+
+        return user;
+    }
+
+    @Override
+    @Transactional
+    public boolean verifyEmail(String token) {
+        Optional<VerificationToken> tokenOptional = tokenRepository.findByToken(token);
+
+        if (tokenOptional.isPresent()) {
+            VerificationToken verificationToken = tokenOptional.get();
+            if (verificationToken.getExpiryDate().isAfter(LocalDateTime.now())) {
+                User user = verificationToken.getUser();
+                user.setEmailVerified(true);
+                userRepository.save(user);
+
+                tokenRepository.delete(verificationToken);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    @Override
+    @Transactional
+    public void updateUserProfile(String currentEmail, UserProfileUpdateDto dto) {
+        User user = userRepository.findByEmail(currentEmail)
+                .orElseThrow(() -> new IllegalArgumentException("Nie znaleziono użytkownika"));
+
+        if (!user.getEmail().equalsIgnoreCase(dto.getEmail())) {
+            if (userRepository.existsByEmail(dto.getEmail())) {
+                throw new LocalizedException("profile.error.emailTaken");
+            }
+            user.setEmail(dto.getEmail().trim().toLowerCase());
+        }
+
+        user.setDisplayName(dto.getDisplayName());
+        user.setMobile(dto.getMobile());
+        user.setDescription(dto.getDescription());
+
+        if (dto.getAvatarFile() != null && !dto.getAvatarFile().isEmpty()) {
+            if (user.getAvatarUrl() != null) {
+                fileStorageService.deleteFile(user.getAvatarUrl());
+            }
+
+            String avatarPath = fileStorageService.storeFile(dto.getAvatarFile());
+            user.setAvatarUrl(avatarPath);
+        }
+
+        userRepository.save(user);
+    }
+
+    @Override
+    @Transactional
+    public void changeUserPassword(String email, UserPasswordUpdateDto dto) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new IllegalArgumentException("Nie znaleziono użytkownika"));
+
+        if (!passwordEncoder.matches(dto.getCurrentPassword(), user.getPasswordHash())) {
+            throw new LocalizedException("profile.error.wrongPassword");
+        }
+
+        user.setPasswordHash(passwordEncoder.encode(dto.getNewPassword()));
+        userRepository.save(user);
+    }
+
+    @Override
+    public User findByEmail(String email) {
+        return userRepository.findByEmail(email)
+                .orElseThrow(() -> new IllegalArgumentException("Nie znaleziono użytkownika"));
+    }
+
+    @Override
+    public User findById(Long id) {
+        return userRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Nie znaleziono użytkownika"));
+    }
+}
