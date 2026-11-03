@@ -18,8 +18,8 @@ import java.util.stream.Collectors;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Test integracyjny: komunikaty walidacji z DTO ({@code message = "{klucz}"}) powinny być tłumaczone
- * przez moduł translations na język bieżącego żądania, z uzupełnieniem wartości {min}/{max}.
+ * Integration test: validation messages from DTOs ({@code message = "{key}"}) should be translated
+ * by the translations module into the language of the current request, with {min}/{max} values filled in.
  */
 @SpringBootTest
 class ValidationMessagesTest {
@@ -33,7 +33,7 @@ class ValidationMessagesTest {
     }
 
     @Test
-    @DisplayName("Komunikaty walidacji powinny być po polsku dla języka polskiego")
+    @DisplayName("Validation messages should be in Polish for the Polish language")
     void shouldTranslateValidationMessagesToPolish() {
         LocaleContextHolder.setLocale(Locale.of("pl"));
 
@@ -41,7 +41,7 @@ class ValidationMessagesTest {
     }
 
     @Test
-    @DisplayName("Komunikaty walidacji powinny być po angielsku dla języka angielskiego")
+    @DisplayName("Validation messages should be in English for the English language")
     void shouldTranslateValidationMessagesToEnglish() {
         LocaleContextHolder.setLocale(Locale.ENGLISH);
 
@@ -49,7 +49,7 @@ class ValidationMessagesTest {
     }
 
     @Test
-    @DisplayName("Powinien wstawić wartości {min} i {max} z adnotacji @Size")
+    @DisplayName("Should insert the {min} and {max} values from the @Size annotation")
     void shouldInterpolateConstraintAttributes() {
         LocaleContextHolder.setLocale(Locale.ENGLISH);
         AdCreateDto dto = new AdCreateDto();

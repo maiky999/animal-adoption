@@ -9,61 +9,61 @@ import com.wsb.animaladoption.model.Category;
 import java.util.List;
 
 /**
- * Logika biznesowa związana z ogłoszeniami adopcyjnymi: wyszukiwanie, tworzenie, edycja,
- * moderacja oraz obsługa ankiet przedadopcyjnych.
+ * Business logic for adoption listings: searching, creating, editing,
+ * moderation and handling pre-adoption questionnaires.
  */
 public interface AdService {
 
     /**
-     * Zwraca aktywne ogłoszenia, opcjonalnie zawężone do kategorii.
+     * Returns active listings, optionally narrowed down to a category.
      *
-     * @param categoryId id kategorii lub {@code null}, aby pobrać wszystkie kategorie
+     * @param categoryId category id, or {@code null} to fetch all categories
      */
     List<Ad> findActiveAds(Long categoryId);
 
     /**
-     * Zwraca ogłoszenie o podanym id.
+     * Returns the listing with the given id.
      *
-     * @throws IllegalArgumentException gdy ogłoszenie nie istnieje
+     * @throws IllegalArgumentException if the listing does not exist
      */
     Ad findById(Long id);
 
-    /** Zwraca wszystkie ogłoszenia danego autora (niezależnie od statusu). */
+    /** Returns all listings of the given author (regardless of status). */
     List<Ad> findUserAds(String authorEmail);
 
-    /** Zwraca ogłoszenia oczekujące na weryfikację moderatora. */
+    /** Returns listings awaiting moderator review. */
     List<Ad> findPendingAds();
 
     /**
-     * Zmienia status ogłoszenia przez jego autora (np. oznaczenie jako adoptowane).
+     * Changes the listing status by its author (e.g. marking it as adopted).
      *
-     * @throws SecurityException gdy użytkownik nie jest autorem ogłoszenia
+     * @throws SecurityException if the user is not the author of the listing
      */
     void changeAdStatus(Long adId, AdStatusEnum newStatus, String authorEmail);
 
     /**
-     * Akceptuje lub odrzuca ogłoszenie w ramach moderacji.
+     * Approves or rejects a listing as part of moderation.
      *
-     * @param approve {@code true} - ogłoszenie staje się aktywne, {@code false} - zostaje odrzucone
+     * @param approve {@code true} - the listing becomes active, {@code false} - it is rejected
      */
     void moderateAd(Long adId, boolean approve);
 
-    /** Tworzy nowe ogłoszenie ze statusem oczekującym na moderację. */
+    /** Creates a new listing with a status awaiting moderation. */
     Ad createAd(AdCreateDto dto, String authorEmail);
 
     /**
-     * Aktualizuje ogłoszenie i ponownie kieruje je do moderacji.
+     * Updates the listing and sends it back to moderation.
      *
-     * @throws SecurityException gdy użytkownik nie jest autorem ogłoszenia
+     * @throws SecurityException if the user is not the author of the listing
      */
     void updateAd(Long id, AdCreateDto dto, String authorEmail);
 
-    /** Zwraca aktywne ogłoszenia użytkownika (np. na potrzeby profilu publicznego). */
+    /** Returns the user's active listings (e.g. for the public profile). */
     List<Ad> findActiveAdsByUserId(Long userId);
 
-    /** Przekazuje ankietę przedadopcyjną do autora ogłoszenia (asynchronicznie, przez kolejkę). */
+    /** Forwards the pre-adoption questionnaire to the listing author (asynchronously, via the queue). */
     void processAdoptionForm(Long adId, AdoptionFormDto dto);
 
-    /** Zwraca wszystkie kategorie ogłoszeń posortowane po id (do filtrów i formularzy). */
+    /** Returns all listing categories sorted by id (for filters and forms). */
     List<Category> findAllCategories();
 }

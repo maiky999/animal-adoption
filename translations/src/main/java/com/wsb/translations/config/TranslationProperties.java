@@ -6,7 +6,7 @@ import java.util.List;
 import java.util.Locale;
 
 /**
- * Ustawienia modułu tłumaczeń, które aplikacja może nadpisać w {@code application.yml}:
+ * Settings of the translations module that the application can override in {@code application.yml}:
  * <pre>
  * app:
  *   i18n:
@@ -17,19 +17,19 @@ import java.util.Locale;
 @ConfigurationProperties(prefix = "app.i18n")
 public class TranslationProperties {
 
-    /** Język domyślny - używany, gdy przeglądarka nie wskazuje obsługiwanego języka. */
+    /** Default language - used when the browser does not indicate a supported language. */
     private Locale defaultLocale = Locale.of("pl");
 
-    /** Obsługiwane języki (kolejność = kolejność w przełączniku języka). */
+    /** Supported languages (order = order in the language switcher). */
     private List<Locale> supportedLocales = List.of(Locale.of("pl"), Locale.ENGLISH);
 
-    /** Nazwa parametru URL zmieniającego język, np. {@code ?lang=en}. */
+    /** Name of the URL parameter that changes the language, e.g. {@code ?lang=en}. */
     private String paramName = "lang";
 
-    /** Nazwa ciasteczka zapamiętującego wybrany język. */
+    /** Name of the cookie that remembers the selected language. */
     private String cookieName = "lang";
 
-    /** Wzorzec wyszukiwania paczek tłumaczeń na classpath. */
+    /** Pattern for finding translation bundles on the classpath. */
     private String bundleLocationPattern = "classpath*:i18n/*/messages.properties";
 
     public Locale getDefaultLocale() {
@@ -72,7 +72,7 @@ public class TranslationProperties {
         this.bundleLocationPattern = bundleLocationPattern;
     }
 
-    /** Sprawdza, czy dany język (porównywany po kodzie języka, np. "en") jest obsługiwany. */
+    /** Checks whether the given language (compared by language code, e.g. "en") is supported. */
     public boolean isSupported(Locale locale) {
         return locale != null && supportedLocales.stream()
                 .anyMatch(supported -> supported.getLanguage().equals(locale.getLanguage()));

@@ -8,23 +8,23 @@
 		<version>0.0.1-SNAPSHOT</version>
 	</parent>
 	<!--
-		Moduł webowy - uruchamiana aplikacja (portal Łapka). Zawiera:
-		  - kontrolery Spring MVC, szablony Thymeleaf i pliki statyczne,
-		  - konfigurację bezpieczeństwa i zasobów (config),
-		  - klasę startową AnimalAdoptionApplication oraz application.yml / data.sql.
-		Logikę biznesową bierze z modułu core (a przez niego encje i repozytoria z modułu domain).
-		Tylko ten moduł jest budowany jako wykonywalny jar Spring Boot.
+		Web module - the runnable application (Łapka portal). It contains:
+		  - Spring MVC controllers, Thymeleaf templates and static files,
+		  - security and resource configuration (config),
+		  - the AnimalAdoptionApplication main class and application.yml / data.sql.
+		It takes the business logic from the core module (and through it the entities and repositories from the domain module).
+		Only this module is built as an executable Spring Boot jar.
 	-->
 	<artifactId>animaladoption-web</artifactId>
 	<name>animal-adoption-web</name>
-	<description>Portal do adopcji zwierząt - aplikacja webowa</description>
+	<description>Animal adoption portal - web application</description>
 	<dependencies>
-		<!-- Logika biznesowa (dołącza też moduł domain z encjami i repozytoriami) -->
+		<!-- Business logic (also brings in the domain module with entities and repositories) -->
 		<dependency>
 			<groupId>com.wsb</groupId>
 			<artifactId>animaladoption-core</artifactId>
 		</dependency>
-		<!-- Moduł tłumaczeń (osobny projekt w ramach repozytorium) -->
+		<!-- Translations module (a separate project within the repository) -->
 		<dependency>
 			<groupId>com.wsb</groupId>
 			<artifactId>animaladoption-translations</artifactId>
@@ -97,8 +97,8 @@
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>
 				<configuration>
-					<!-- Uruchamianie z katalogu głównego repozytorium (wspólny folder uploads/ i plik .env),
-					     niezależnie od tego, że kod aplikacji leży w module app/ -->
+					<!-- Run from the repository root directory (shared uploads/ folder and .env file),
+					     even though the application code lives in the web/ module -->
 					<workingDirectory>${maven.multiModuleProjectDirectory}</workingDirectory>
 					<excludes>
 						<exclude>

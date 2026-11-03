@@ -23,8 +23,8 @@ public class Category {
     private String name;
 
     /**
-     * Klucz tłumaczenia nazwy kategorii, np. "Gady i płazy" -> "category.gady_i_płazy" (paczka i18n/common).
-     * Kategorie dodane później w bazie, bez tłumaczenia, wyświetlają się pod oryginalną nazwą.
+     * Translation key of the category name, e.g. "Gady i płazy" -> "category.gady_i_płazy" (i18n/common bundle).
+     * Categories added later in the database, without a translation, are displayed under their original name.
      */
     public String getMessageKey() {
         return "category." + name.trim().toLowerCase(Locale.ROOT).replace(' ', '_');

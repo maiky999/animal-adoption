@@ -78,7 +78,7 @@ class AdRepositoryTest {
     }
 
     @Test
-    @DisplayName("findAllByStatusOrderByCreatedAtDesc - powinien zwrócić tylko aktywne ogłoszenia posortowane od najnowszego")
+    @DisplayName("findAllByStatusOrderByCreatedAtDesc - should return only active listings sorted newest first")
     void shouldFindAllByStatusOrderByCreatedAtDesc() {
         Ad olderActiveAd = createAndPersistAd("Starsze ogłoszenie", categoryDogs, user1,
                 AdStatusEnum.ACTIVE, LocalDateTime.now());
@@ -107,7 +107,7 @@ class AdRepositoryTest {
     }
 
     @Test
-    @DisplayName("findAllByCategoryIdAndStatusOrderByCreatedAtDesc - powinien filtrować po kategorii i statusie")
+    @DisplayName("findAllByCategoryIdAndStatusOrderByCreatedAtDesc - should filter by category and status")
     void shouldFindAllByCategoryIdAndStatusOrderByCreatedAtDesc() {
         createAndPersistAd("Pies aktywny", categoryDogs, user1, AdStatusEnum.ACTIVE, LocalDateTime.now());
         createAndPersistAd("Pies oczekujący", categoryDogs, user1, AdStatusEnum.PENDING, LocalDateTime.now());
@@ -122,7 +122,7 @@ class AdRepositoryTest {
     }
 
     @Test
-    @DisplayName("findAllByAuthorEmailOrderByCreatedAtDesc - powinien zwrócić ogłoszenia danego autora")
+    @DisplayName("findAllByAuthorEmailOrderByCreatedAtDesc - should return the listings of the given author")
     void shouldFindAllByAuthorEmailOrderByCreatedAtDesc() {
         createAndPersistAd("Ogłoszenie Jana", categoryDogs, user1, AdStatusEnum.ACTIVE, LocalDateTime.now());
         createAndPersistAd("Ogłoszenie Anny", categoryCats, user2, AdStatusEnum.ACTIVE, LocalDateTime.now());

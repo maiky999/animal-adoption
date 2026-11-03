@@ -11,7 +11,7 @@
     <i class="ph-fill ph-chats-teardrop text-5xl text-gray-200"></i>
   </div>
 
-  <!-- Brak wiadomości -->
+  <!-- No messages -->
   <div th:if="${#lists.isEmpty(conversations)}" class="text-center py-20 bg-white rounded-2xl border border-dashed border-gray-300">
     <i class="ph ph-envelope-open text-6xl text-gray-300 mb-4"></i>
     <h3 class="text-xl font-medium text-gray-600">[[#{inbox.empty.title}]]</h3>
@@ -21,24 +21,24 @@
     </a>
   </div>
 
-  <!-- Lista konwersacji -->
+  <!-- Conversation list -->
   <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden" th:unless="${#lists.isEmpty(conversations)}">
     <ul class="divide-y divide-gray-100">
 
       <li th:each="conv : ${conversations}" class="hover:bg-gray-50 transition">
         <a th:href="@{/messages/{adId}/{userId}(adId=${conv.ad.id}, userId=${conv.otherUser.id})}" class="flex items-center p-5">
 
-          <!-- Awatar rozmówcy -->
+          <!-- Other participant's avatar -->
           <div class="relative flex-shrink-0">
             <div class="w-14 h-14 rounded-full bg-orange-100 text-primary flex items-center justify-center font-bold text-xl shadow-sm uppercase overflow-hidden border-2 border-white">
               <img th:if="${conv.otherUser.avatarUrl != null}" th:src="${conv.otherUser.avatarUrl}" alt="Avatar" class="w-full h-full object-cover">
               <span th:unless="${conv.otherUser.avatarUrl != null}" th:text="${#strings.substring(conv.otherUser.displayName,0,1)}">A</span>
             </div>
-            <!-- Plakietka ilości nieprzeczytanych -->
+            <!-- Unread count badge -->
             <div th:if="${conv.unreadCount > 0}" class="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold w-5 h-5 flex items-center justify-center rounded-full border-2 border-white" th:text="${conv.unreadCount}">1</div>
           </div>
 
-          <!-- Treść skrócona -->
+          <!-- Shortened content -->
           <div class="ml-4 flex-grow min-w-0">
             <div class="flex justify-between items-baseline mb-1">
               <h3 class="text-lg font-bold text-gray-800 truncate pr-4" th:text="${conv.otherUser.displayName}">Nazwa rozmówcy</h3>
@@ -49,7 +49,7 @@
               [[#{inbox.regarding}]] <span class="text-gray-600" th:text="${conv.ad.title}">Tytuł ogłoszenia</span>
             </p>
 
-            <!-- Skrót ostatniej wiadomości pogrubiony jeśli nieprzeczytana -->
+            <!-- Last message preview, bold if unread -->
             <p class="text-sm truncate"
                th:classappend="${conv.unreadCount > 0} ? 'text-gray-900 font-bold' : 'text-gray-500'"
                th:text="${(conv.latestMessage.sender.id == conv.otherUser.id ? '' : #messages.msg('inbox.you') + ' ') + conv.latestMessage.content}">
@@ -57,7 +57,7 @@
             </p>
           </div>
 
-          <!-- Strzałka -->
+          <!-- Arrow -->
           <div class="ml-4 text-gray-300">
             <i class="ph ph-caret-right text-xl"></i>
           </div>

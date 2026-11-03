@@ -31,13 +31,13 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * Test "dymny" (smoke test) widoków: renderuje każdą stronę aplikacji w obu językach i sprawdza, że
+ * Smoke test of the views: renders every page of the application in both languages and checks that
  * <ul>
- *     <li>szablon renderuje się bez błędu (np. literówki w wyrażeniu Thymeleaf),</li>
- *     <li>nie ma brakujących tłumaczeń (Thymeleaf wyświetla je jako {@code ??klucz_jezyk??}),</li>
- *     <li>strona jest faktycznie w wybranym języku.</li>
+ *     <li>the template renders without errors (e.g. a typo in a Thymeleaf expression),</li>
+ *     <li>there are no missing translations (Thymeleaf displays them as {@code ??key_locale??}),</li>
+ *     <li>the page is actually in the selected language.</li>
  * </ul>
- * Język angielski wybierany jest parametrem {@code ?lang=en} - tak jak przełącznikiem w nawigacji.
+ * English is selected with the {@code ?lang=en} parameter - just like with the switcher in the navigation.
  */
 @SpringBootTest(properties = {
         "spring.rabbitmq.listener.simple.auto-startup=false",
@@ -93,7 +93,7 @@ class PageRenderingI18nTest {
         articleId = article.getId();
     }
 
-    /** Strona, czy wymaga zalogowania, oczekiwany tekst po polsku i po angielsku. */
+    /** Page, whether it requires login, expected text in Polish and in English. */
     static Stream<Arguments> pages() {
         return Stream.of(
                 Arguments.of("/", false, "Daj im nowy", "Give them a new"),
@@ -134,12 +134,12 @@ class PageRenderingI18nTest {
 
         assertThat(html).contains(englishText).doesNotContain("??");
         if (isFullPage(path)) {
-            // cała strona (łącznie z layoutem) ma być po angielsku, a nie tylko jej fragment
+            // the whole page (including the layout) must be in English, not just a fragment of it
             assertThat(html).contains("lang=\"en\"", "Made with").doesNotContain("Stworzone z");
         }
     }
 
-    /** Okno szczegółów ogłoszenia (/ads/{id}) to fragment HTMX bez layoutu - pozostałe strony mają pełny layout. */
+    /** The listing details window (/ads/{id}) is an HTMX fragment without a layout - the other pages have the full layout. */
     private static boolean isFullPage(String path) {
         return !path.equals("/ads/{adId}");
     }

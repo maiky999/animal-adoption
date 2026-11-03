@@ -6,45 +6,45 @@ import com.wsb.animaladoption.dto.UserRegistrationDto;
 import com.wsb.animaladoption.model.User;
 
 /**
- * Logika biznesowa kont użytkowników: rejestracja, weryfikacja e-mail i zarządzanie profilem.
+ * Business logic for user accounts: registration, email verification and profile management.
  */
 public interface UserService {
 
-    /** Rejestruje nowego użytkownika i wysyła e-mail z linkiem weryfikacyjnym. */
+    /** Registers a new user and sends an email with a verification link. */
     User registerNewUser(UserRegistrationDto dto);
 
     /**
-     * Aktywuje konto na podstawie tokenu weryfikacyjnego.
+     * Activates the account based on the verification token.
      *
-     * @return {@code true}, gdy token istnieje i nie wygasł
+     * @return {@code true} if the token exists and has not expired
      */
     boolean verifyEmail(String token);
 
     /**
-     * Aktualizuje dane profilu użytkownika (w tym avatar).
+     * Updates the user's profile data (including the avatar).
      *
-     * @throws IllegalArgumentException gdy nowy e-mail jest zajęty przez inne konto
+     * @throws IllegalArgumentException if the new email is already used by another account
      */
     void updateUserProfile(String currentEmail, UserProfileUpdateDto dto);
 
     /**
-     * Zmienia hasło użytkownika po weryfikacji obecnego hasła.
+     * Changes the user's password after verifying the current password.
      *
-     * @throws IllegalArgumentException gdy obecne hasło jest nieprawidłowe
+     * @throws IllegalArgumentException if the current password is incorrect
      */
     void changeUserPassword(String email, UserPasswordUpdateDto dto);
 
     /**
-     * Zwraca użytkownika o podanym adresie e-mail.
+     * Returns the user with the given email address.
      *
-     * @throws IllegalArgumentException gdy użytkownik nie istnieje
+     * @throws IllegalArgumentException if the user does not exist
      */
     User findByEmail(String email);
 
     /**
-     * Zwraca użytkownika o podanym id.
+     * Returns the user with the given id.
      *
-     * @throws IllegalArgumentException gdy użytkownik nie istnieje
+     * @throws IllegalArgumentException if the user does not exist
      */
     User findById(Long id);
 }

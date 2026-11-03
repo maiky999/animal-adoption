@@ -36,7 +36,7 @@ class PropertiesTranslationServiceTest {
     }
 
     @Test
-    @DisplayName("Powinien zwrócić tłumaczenie w języku bieżącego żądania")
+    @DisplayName("Should return the translation in the language of the current request")
     void shouldTranslateUsingCurrentLocale() {
         LocaleContextHolder.setLocale(Locale.ENGLISH);
         assertThat(translationService.get("nav.ads")).isEqualTo("Listings");
@@ -46,41 +46,41 @@ class PropertiesTranslationServiceTest {
     }
 
     @Test
-    @DisplayName("Powinien zwrócić tłumaczenie we wskazanym języku niezależnie od żądania")
+    @DisplayName("Should return the translation in the given language regardless of the request")
     void shouldTranslateUsingGivenLocale() {
         LocaleContextHolder.setLocale(PL);
         assertThat(translationService.get(Locale.ENGLISH, "nav.login")).isEqualTo("Log in");
     }
 
     @Test
-    @DisplayName("Powinien wstawić argumenty w miejsca {0}, {1}...")
+    @DisplayName("Should insert arguments in place of {0}, {1}...")
     void shouldFormatArguments() {
         String subject = translationService.get(Locale.ENGLISH, "email.adoption.subject", "Burek");
         assertThat(subject).isEqualTo("New pre-adoption survey: Burek");
     }
 
     @Test
-    @DisplayName("Dla nieobsługiwanego języka powinien użyć języka domyślnego (polskiego), a nie języka systemu")
+    @DisplayName("Should use the default language (Polish), not the system language, for an unsupported language")
     void shouldFallbackToDefaultLanguage() {
         assertThat(translationService.get(Locale.GERMAN, "nav.ads")).isEqualTo("Ogłoszenia");
     }
 
     @Test
-    @DisplayName("Powinien zwrócić wartość domyślną dla nieistniejącego klucza")
+    @DisplayName("Should return the default value for a non-existent key")
     void shouldReturnDefaultValueForMissingKey() {
         assertThat(translationService.getOrDefault("category.nowa_kategoria", "Nowa kategoria"))
                 .isEqualTo("Nowa kategoria");
     }
 
     @Test
-    @DisplayName("Powinien rzucić wyjątek dla nieistniejącego klucza")
+    @DisplayName("Should throw an exception for a non-existent key")
     void shouldThrowForMissingKey() {
         assertThatThrownBy(() -> translationService.get("nie.ma.takiego.klucza"))
                 .isInstanceOf(NoSuchMessageException.class);
     }
 
     @Test
-    @DisplayName("Powinien przetłumaczyć obiekt niosący klucz (np. wyjątek biznesowy)")
+    @DisplayName("Should translate an object carrying a key (e.g. a business exception)")
     void shouldTranslateResolvable() {
         LocaleContextHolder.setLocale(Locale.ENGLISH);
         assertThat(translationService.get(new DefaultMessageSourceResolvable("profile.error.wrongPassword")))
@@ -88,7 +88,7 @@ class PropertiesTranslationServiceTest {
     }
 
     @Test
-    @DisplayName("Powinien udostępnić listę obsługiwanych języków i język domyślny")
+    @DisplayName("Should expose the list of supported languages and the default language")
     void shouldExposeSupportedLocales() {
         assertThat(translationService.getSupportedLocales()).containsExactly(PL, Locale.ENGLISH);
         assertThat(translationService.getDefaultLocale()).isEqualTo(PL);

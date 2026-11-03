@@ -52,7 +52,7 @@ public class AuthController {
             dto.setEmail(dto.getEmail().trim().toLowerCase());
             userService.registerNewUser(dto);
         } catch (IllegalArgumentException | DataIntegrityViolationException e) {
-            // Kod błędu jest kluczem tłumaczenia - Spring rozwiąże go przez MessageSource przy wyświetlaniu pola
+            // The error code is a translation key - Spring resolves it through MessageSource when displaying the field
             result.rejectValue("email", "validation.email.taken");
             return "user/register";
         }

@@ -1,11 +1,11 @@
-# Wspólne ustawienia edytora dla całego zespołu (IntelliJ IDEA, VS Code i inne obsługują EditorConfig).
+# Shared editor settings for the whole team (IntelliJ IDEA, VS Code and others support EditorConfig).
 # https://editorconfig.org
 root = true
 
 [*]
 charset = utf-8
 
-# Pliki tłumaczeń są zapisane w UTF-8 (moduł translations czyta je jako UTF-8).
-# Bez tego IntelliJ domyślnie otwiera .properties jako ISO-8859-1 i psuje polskie znaki.
+# Translation files are saved in UTF-8 (the translations module reads them as UTF-8).
+# Without this, IntelliJ opens .properties as ISO-8859-1 by default and breaks Polish characters.
 [*.properties]
 charset = utf-8

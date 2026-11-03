@@ -12,7 +12,7 @@ import java.io.Serializable;
 public class RegistrationEvent implements Serializable {
     private String email;
     private String verificationToken;
-    /** Język, w którym ma zostać wysłany e-mail (np. "pl", "en"). */
+    /** Language in which the email should be sent (e.g. "pl", "en"). */
     private String languageTag;
 
 }

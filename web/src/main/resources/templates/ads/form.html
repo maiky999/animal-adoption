@@ -4,16 +4,16 @@
 <main class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-12 w-full flex-grow">
 
   <div class="bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
-    <!-- Dynamiczny nagłówek -->
+    <!-- Dynamic heading -->
     <h2 class="text-3xl font-bold text-gray-800 mb-6" th:text="${editMode == true} ? #{ads.form.title.edit} : #{ads.form.title.new}">Dodaj nowe ogłoszenie</h2>
 
-    <!-- Wyświetlanie błędu przekroczenia rozmiaru plików z backendu -->
+    <!-- Displaying the file size limit error from the backend -->
     <div th:if="${errorMessage}" class="bg-red-50 text-red-600 p-4 rounded-xl text-sm mb-6 border border-red-100 flex items-center shadow-sm fade-in">
       <i class="ph ph-warning-circle text-2xl mr-2"></i>
       <span th:text="#{${errorMessage}}"></span>
     </div>
 
-    <!-- Dynamiczna akcja formularza: /ads/new lub /ads/{id}/edit -->
+    <!-- Dynamic form action: /ads/new or /ads/{id}/edit -->
     <form th:action="${editMode == true} ? @{/ads/{id}/edit(id=${adId})} : @{/ads/new}" th:object="${adCreateDto}" method="post" enctype="multipart/form-data" class="space-y-6">
 
       <div>
@@ -45,22 +45,22 @@
         </div>
       </div>
 
-      <!-- POLE NA ZDJĘCIA z dynamicznym błędem JS i podglądem -->
+      <!-- PHOTO FIELD with a dynamic JS error and preview -->
       <div>
         <label for="imageFiles" class="block text-sm font-medium text-gray-700 mb-1">[[#{ads.form.field.images}]]</label>
         <input type="file" id="imageFiles" name="imageFiles" accept="image/*" multiple
                class="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-primary focus:border-primary outline-none transition file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-orange-50 file:text-primary hover:file:bg-orange-100">
 
-        <!-- Różne instrukcje w zależności od trybu -->
+        <!-- Different instructions depending on the mode -->
         <p class="text-xs text-gray-500 mt-1" th:unless="${editMode == true}">[[#{ads.form.images.hint}]]</p>
         <p class="text-xs text-blue-600 font-medium mt-1" th:if="${editMode == true}">
           <i class="ph-fill ph-info"></i> [(#{ads.form.images.hint.edit})]
         </p>
 
-        <!-- Zarezerwowane miejsce na komunikat błędu -->
+        <!-- Reserved space for the error message -->
         <p id="fileSizeError" class="hidden text-red-500 text-sm font-medium mt-2 p-3 bg-red-50 rounded-lg border border-red-100"></p>
 
-        <!-- Dynamiczny podgląd miniatur zdjęć -->
+        <!-- Dynamic photo thumbnail preview -->
         <div id="imagePreviewContainer" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 mt-4 empty:hidden"></div>
       </div>
 
@@ -73,7 +73,7 @@
       </div>
 
       <div class="pt-4">
-        <!-- Dynamiczny przycisk submit -->
+        <!-- Dynamic submit button -->
         <button type="submit" class="w-full bg-primary hover:bg-primaryHover text-white font-bold py-3 px-4 rounded-xl shadow-md transition" th:text="${editMode == true} ? #{ads.form.submit.edit} : #{ads.form.submit.new}">
           Opublikuj ogłoszenie
         </button>
@@ -81,9 +81,9 @@
     </form>
   </div>
 
-  <!-- Ulepszona walidacja i podgląd miniatur zdjęć -->
+  <!-- Improved validation and photo thumbnail preview -->
   <script th:inline="javascript">
-            // Teksty komunikatów z modułu tłumaczeń (wstawiane przez Thymeleaf w bieżącym języku)
+            // Message texts from the translations module (inserted by Thymeleaf in the current language)
             const I18N = {
                 blocked: /*[[#{ads.form.js.blocked}]]*/ 'Zablokowano:',
                 totalTooBig: /*[[#{ads.form.js.totalTooBig}]]*/ '',
@@ -94,9 +94,9 @@
             const errorMsg = document.getElementById('fileSizeError');
             const form = document.querySelector('form');
 
-            // UWAGA: Zmniejszono limit do 2MB, ponieważ serwer odrzuca większe paczki (3.5MB)
+            // NOTE: The limit was reduced to 2MB because the server rejects larger payloads (3.5MB)
             const SAFE_SINGLE_SIZE = 1 * 1024 * 1024; // 1 MB
-            const SAFE_TOTAL_SIZE = 2 * 1024 * 1024;  // 2 MB (Domyślny limit Tomcata)
+            const SAFE_TOTAL_SIZE = 2 * 1024 * 1024;  // 2 MB (Tomcat's default limit)
 
             fileInput.addEventListener('change', function() {
                 previewContainer.innerHTML = '';

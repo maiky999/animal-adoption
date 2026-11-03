@@ -14,12 +14,12 @@ class StringCryptoConverterTest {
     @BeforeEach
     void setUp() {
         converter = new StringCryptoConverter();
-        // Klucz testowy dla AES-128 / AES-256 (16 lub 32 znaki)
+        // Test key for AES-128 / AES-256 (16 or 32 characters)
         ReflectionTestUtils.setField(converter, "secretKeyString", "TestSecretKey1234567890!@#$%^&*");
     }
 
     @Test
-    @DisplayName("Powinien poprawnie zaszyfrować i odszyfrować numer telefonu (round-trip)")
+    @DisplayName("Should correctly encrypt and decrypt a phone number (round-trip)")
     void shouldEncryptAndDecryptSuccessfully() {
         // given
         String rawPhone = "+48 500 600 700";
@@ -35,7 +35,7 @@ class StringCryptoConverterTest {
     }
 
     @Test
-    @DisplayName("Powinien zwrócić null, gdy do zaszyfrowania przekazano null")
+    @DisplayName("Should return null when null is passed for encryption")
     void shouldReturnNullWhenConvertingNullToDatabaseColumn() {
         // when
         String encrypted = converter.convertToDatabaseColumn(null);
@@ -45,7 +45,7 @@ class StringCryptoConverterTest {
     }
 
     @Test
-    @DisplayName("Powinien zwrócić null, gdy do odszyfrowania przekazano null")
+    @DisplayName("Should return null when null is passed for decryption")
     void shouldReturnNullWhenConvertingNullToEntityAttribute() {
         // when
         String decrypted = converter.convertToEntityAttribute(null);

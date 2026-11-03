@@ -33,7 +33,7 @@ class UserRepositoryTest {
     private EntityManager entityManager;
 
     @Test
-    @DisplayName("findByEmail - powinien znaleźć użytkownika po poprawnym adresie email")
+    @DisplayName("findByEmail - should find the user by a valid email address")
     void shouldFindUserByEmail() {
         User user = User.builder()
                 .email("test.repo@example.com")
@@ -55,7 +55,7 @@ class UserRepositoryTest {
     }
 
     @Test
-    @DisplayName("findByEmail - powinien zwrócić pusty Optional, gdy użytkownik nie istnieje")
+    @DisplayName("findByEmail - should return an empty Optional when the user does not exist")
     void shouldReturnEmptyWhenUserNotFound() {
         Optional<User> found = userRepository.findByEmail("nieistniejacy@example.com");
 

@@ -6,23 +6,23 @@ import com.wsb.animaladoption.model.Article;
 import java.util.List;
 
 /**
- * Logika biznesowa związana z artykułami publikowanymi w serwisie.
+ * Business logic for articles published on the portal.
  */
 public interface ArticleService {
 
-    /** Zwraca wszystkie artykuły, od najnowszego. */
+    /** Returns all articles, newest first. */
     List<Article> findAll();
 
-    /** Zwraca określoną liczbę najnowszych artykułów. */
+    /** Returns the given number of the newest articles. */
     List<Article> findLatest(int limit);
 
     /**
-     * Zwraca artykuł o podanym id.
+     * Returns the article with the given id.
      *
-     * @throws IllegalArgumentException gdy artykuł nie istnieje
+     * @throws IllegalArgumentException if the article does not exist
      */
     Article findById(Long id);
 
-    /** Tworzy nowy artykuł, którego autorem jest wskazany użytkownik. */
+    /** Creates a new article authored by the given user. */
     Article createArticle(ArticleCreateDto dto, String authorEmail);
 }

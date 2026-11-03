@@ -14,7 +14,7 @@ import org.springframework.security.web.SecurityFilterChain;
 @EnableWebSecurity
 public class SecurityConfig {
 
-    // Pobieranie klucza ze zmiennych środowiskowych/application.yml
+    // Reading the key from environment variables / application.yml
     @Value("${app.security.remember-me-key}")
     private String rememberMeKey;
 

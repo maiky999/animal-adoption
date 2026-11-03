@@ -39,7 +39,7 @@ class ArticleServiceTest {
     private ArticleServiceImpl articleService;
 
     @Test
-    @DisplayName("findAll - powinien zwrócić wszystkie artykuły")
+    @DisplayName("findAll - should return all articles")
     void shouldFindAllArticles() {
         Article a1 = Article.builder().id(1L).title("Artykuł 1").build();
         Article a2 = Article.builder().id(2L).title("Artykuł 2").build();
@@ -52,7 +52,7 @@ class ArticleServiceTest {
     }
 
     @Test
-    @DisplayName("findLatest - powinien ograniczyć liczbę zwracanych artykułów")
+    @DisplayName("findLatest - should limit the number of returned articles")
     void shouldLimitLatestArticles() {
         Article a1 = Article.builder().id(1L).title("Artykuł 1").build();
         Article a2 = Article.builder().id(2L).title("Artykuł 2").build();
@@ -67,7 +67,7 @@ class ArticleServiceTest {
     }
 
     @Test
-    @DisplayName("findById - powinien zwrócić artykuł, gdy istnieje")
+    @DisplayName("findById - should return the article when it exists")
     void shouldFindArticleById() {
         Article article = Article.builder().id(10L).title("Jak dbać o psa").build();
         when(articleRepository.findById(10L)).thenReturn(Optional.of(article));
@@ -79,7 +79,7 @@ class ArticleServiceTest {
     }
 
     @Test
-    @DisplayName("findById - powinien rzucić IllegalArgumentException, gdy artykuł nie istnieje")
+    @DisplayName("findById - should throw IllegalArgumentException when the article does not exist")
     void shouldThrowExceptionWhenArticleNotFound() {
         when(articleRepository.findById(99L)).thenReturn(Optional.empty());
 
@@ -89,7 +89,7 @@ class ArticleServiceTest {
     }
 
     @Test
-    @DisplayName("createArticle - powinien zapisać plik, powiązać autora i utworzyć artykuł")
+    @DisplayName("createArticle - should save the file, link the author and create the article")
     void shouldCreateArticleSuccessfully() {
         User author = User.builder().id(1L).email("author@example.com").build();
         MockMultipartFile imageFile = new MockMultipartFile("image", "test.jpg", "image/jpeg", "content".getBytes());
@@ -115,7 +115,7 @@ class ArticleServiceTest {
     }
 
     @Test
-    @DisplayName("createArticle - powinien rzucić wyjątek gdy autor nie istnieje")
+    @DisplayName("createArticle - should throw an exception when the author does not exist")
     void shouldThrowExceptionWhenAuthorNotFound() {
         ArticleCreateDto dto = new ArticleCreateDto();
         when(userRepository.findByEmail("nieistnieje@example.com")).thenReturn(Optional.empty());

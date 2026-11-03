@@ -17,7 +17,7 @@
 
     <form th:action="@{/moderation/articles/new}" th:object="${articleCreateDto}" method="post" enctype="multipart/form-data" class="space-y-6">
 
-      <!-- Tytuł -->
+      <!-- Title -->
       <div>
         <label for="title" class="block text-base font-bold text-textMain mb-2">[[#{moderation.article.field.title}]]</label>
         <input type="text" id="title" th:field="*{title}" th:placeholder="#{moderation.article.placeholder.title}"
@@ -26,10 +26,10 @@
         <p th:if="${#fields.hasErrors('title')}" th:errors="*{title}" class="mt-2 text-sm text-red-500 font-bold flex items-center"><i class="ph-fill ph-warning-circle mr-1"></i></p>
       </div>
 
-      <!-- Zdjęcie Główne (Naprawiony podgląd) -->
+      <!-- Main image (fixed preview) -->
       <div>
         <label for="imageFile" class="block text-base font-bold text-textMain mb-2">[[#{moderation.article.field.image}]]</label>
-        <!-- DODANO: min-h-[300px] flex items-center justify-center aby zapobiec zapadaniu się pola -->
+        <!-- ADDED: min-h-[300px] flex items-center justify-center to prevent the field from collapsing -->
         <div class="relative bg-background border-2 border-dashed border-accent rounded-3xl p-8 min-h-[300px] flex items-center justify-center text-center hover:bg-orange-50/50 transition cursor-pointer group" onclick="document.getElementById('imageFile').click()">
 
           <input type="file" id="imageFile" name="imageFile" accept="image/*" class="hidden" onchange="previewImage(event)">
@@ -44,7 +44,7 @@
         </div>
       </div>
 
-      <!-- Treść -->
+      <!-- Content -->
       <div>
         <label for="content" class="block text-base font-bold text-textMain mb-2">[[#{moderation.article.field.content}]]</label>
         <textarea id="content" th:field="*{content}" rows="15" th:placeholder="#{moderation.article.placeholder.content}"
@@ -61,7 +61,7 @@
     </form>
   </div>
 
-  <!-- Skrypt do podglądu wybranego obrazka -->
+  <!-- Script for previewing the selected image -->
   <script>
         function previewImage(event) {
             const file = event.target.files[0];

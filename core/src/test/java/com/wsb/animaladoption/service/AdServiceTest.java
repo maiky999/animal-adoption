@@ -79,7 +79,7 @@ class AdServiceTest {
     }
 
     @Test
-    @DisplayName("Powinien znaleźć ogłoszenie po ID")
+    @DisplayName("Should find a listing by ID")
     void shouldFindAdById() {
         when(adRepository.findById(10L)).thenReturn(Optional.of(sampleAd));
 
@@ -92,7 +92,7 @@ class AdServiceTest {
     }
 
     @Test
-    @DisplayName("Powinien rzucić IllegalArgumentException gdy ogłoszenie nie istnieje")
+    @DisplayName("Should throw IllegalArgumentException when the listing does not exist")
     void shouldThrowExceptionWhenAdNotFound() {
         when(adRepository.findById(99L)).thenReturn(Optional.empty());
 
@@ -101,7 +101,7 @@ class AdServiceTest {
     }
 
     @Test
-    @DisplayName("Powinien zmienić status ogłoszenia gdy autor jest poprawny")
+    @DisplayName("Should change the listing status when the author is correct")
     void shouldChangeAdStatusSuccessfully() {
         when(adRepository.findById(10L)).thenReturn(Optional.of(sampleAd));
 
@@ -112,7 +112,7 @@ class AdServiceTest {
     }
 
     @Test
-    @DisplayName("Powinien rzucić SecurityException przy próbie edycji przez innego użytkownika")
+    @DisplayName("Should throw SecurityException when another user tries to edit")
     void shouldThrowSecurityExceptionWhenAuthorDoesNotMatch() {
         when(adRepository.findById(10L)).thenReturn(Optional.of(sampleAd));
 
@@ -123,7 +123,7 @@ class AdServiceTest {
     }
 
     @Test
-    @DisplayName("Powinien zatwierdzić ogłoszenie przez moderatora")
+    @DisplayName("Should approve a listing by a moderator")
     void shouldModerateAdApprove() {
         sampleAd.setStatus(AdStatusEnum.PENDING);
         when(adRepository.findById(10L)).thenReturn(Optional.of(sampleAd));
@@ -135,7 +135,7 @@ class AdServiceTest {
     }
 
     @Test
-    @DisplayName("Powinien wysłać wiadomość do RabbitMQ podczas przetwarzania formularza adopcji")
+    @DisplayName("Should send a message to RabbitMQ when processing the adoption form")
     void shouldProcessAdoptionFormAndSendEvent() {
         when(adRepository.findById(10L)).thenReturn(Optional.of(sampleAd));
         when(translationService.getDefaultLocale()).thenReturn(Locale.of("pl"));
@@ -157,7 +157,7 @@ class AdServiceTest {
                 eq(RabbitMQConfig.ROUTING_KEY_ADOPTION_FORM),
                 eventCaptor.capture()
         );
-        // Język organizacji nie jest znany - ankieta trafia do niej w języku domyślnym
+        // The organization's language is unknown - the questionnaire is sent to it in the default language
         assertEquals("pl", eventCaptor.getValue().getLanguageTag());
     }
 }

@@ -12,33 +12,33 @@
                 <span class="font-black text-3xl tracking-tight text-textMain hidden sm:block">Łapka</span>
             </a>
 
-            <!-- Opcje uwierzytelniania / Menu -->
+            <!-- Authentication options / Menu -->
             <div class="flex items-center space-x-1 md:space-x-3">
 
-                <!-- GŁÓWNA NAWIGACJA -->
-                <!-- Link do tablicy ogłoszeń -->
+                <!-- MAIN NAVIGATION -->
+                <!-- Link to the listings board -->
                 <a th:href="@{/ads}" class="text-textMain/70 hover:text-primary transition-colors font-bold px-3 py-2 rounded-xl hover:bg-accent hidden md:flex items-center">
                     <i class="ph-bold ph-magnifying-glass mr-2"></i> [[#{nav.ads}]]
                 </a>
-                <!-- NOWOŚĆ: Link do listy poradników / artykułów -->
+                <!-- NEW: Link to the list of guides / articles -->
                 <a th:href="@{/articles}" class="text-textMain/70 hover:text-primary transition-colors font-bold px-3 py-2 rounded-xl hover:bg-accent hidden md:flex items-center">
                     <i class="ph-bold ph-book-open-text mr-2"></i> [[#{nav.articles}]]
                 </a>
 
-                <!-- Dropdown dla Moderatora (Zarządzanie Ogloszeniami i Dodawanie Artykułów) -->
+                <!-- Moderator dropdown (managing listings and adding articles) -->
                 <div sec:authorize="hasAnyRole('MODERATOR', 'ADMIN')" class="relative group">
                     <button class="text-red-500 hover:text-red-600 hover:bg-red-50 transition font-bold px-3 py-2 rounded-xl flex items-center">
                         <i class="ph-fill ph-shield-check mr-1 text-xl"></i> [[#{nav.moderation}]]
                     </button>
-                    <!-- Menu rozwijane -->
+                    <!-- Dropdown menu -->
                     <div class="absolute right-0 mt-2 w-56 bg-white rounded-2xl shadow-lg border border-accent opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 z-50 overflow-hidden">
                         <a th:href="@{/moderation/ads}" class="block px-4 py-3 text-sm font-bold text-gray-700 hover:bg-accent hover:text-primary"><i class="ph-bold ph-list mr-2"></i> [[#{nav.moderation.ads}]]</a>
-                        <!-- NOWOŚĆ: Przycisk dodawania artykułu dla moderatora -->
+                        <!-- NEW: Add article button for the moderator -->
                         <a th:href="@{/moderation/articles/new}" class="block px-4 py-3 text-sm font-bold text-gray-700 hover:bg-accent hover:text-primary border-t border-accent/50"><i class="ph-bold ph-pen-nib mr-2"></i> [[#{nav.moderation.newArticle}]]</a>
                     </div>
                 </div>
 
-                <!-- Przełącznik języka (moduł translations, parametr ?lang=) -->
+                <!-- Language switcher (translations module, ?lang= parameter) -->
                 <div class="flex items-center bg-accent/60 rounded-full p-1 text-xs font-black" th:title="#{nav.language}">
                     <a th:each="loc : ${@translationService.supportedLocales}"
                        th:href="'?lang=' + ${loc.language}"
@@ -47,13 +47,13 @@
                        class="px-2 py-1 rounded-full transition">PL</a>
                 </div>
 
-                <!-- Dla niezalogowanych -->
+                <!-- For guests -->
                 <div sec:authorize="!isAuthenticated()" class="flex items-center space-x-2">
                     <a th:href="@{/login}" class="text-textMain/80 hover:text-primary transition font-bold px-3 py-2">[[#{nav.login}]]</a>
                     <a th:href="@{/register}" class="bg-textMain hover:bg-black text-white px-5 py-2.5 rounded-full font-bold transition shadow-md whitespace-nowrap">[[#{nav.join}]]</a>
                 </div>
 
-                <!-- Dla zalogowanych -->
+                <!-- For logged-in users -->
                 <div sec:authorize="isAuthenticated()" class="flex items-center space-x-1 sm:space-x-2">
 
                     <a th:href="@{/my-ads}" class="text-textMain/70 hover:text-primary hover:bg-accent p-2.5 rounded-2xl transition flex items-center" th:title="#{nav.myAds}">

@@ -6,49 +6,49 @@ import java.util.List;
 import java.util.Locale;
 
 /**
- * Serwis tłumaczeń - jedyny punkt dostępu do tekstów aplikacji w kodzie Java.
+ * Translation service - the single access point to application texts in Java code.
  * <p>
- * Teksty są przechowywane jako pary klucz-wartość (np. {@code nav.ads=Ogłoszenia}). Kod aplikacji
- * posługuje się wyłącznie kluczami, a serwis zwraca wartość w odpowiednim języku.
- * Szablony Thymeleaf korzystają z tych samych tłumaczeń bezpośrednio, przez wyrażenia {@code #{klucz}}.
+ * Texts are stored as key-value pairs (e.g. {@code nav.ads=Ogłoszenia}). Application code
+ * uses only the keys, and the service returns the value in the appropriate language.
+ * Thymeleaf templates use the same translations directly, through {@code #{key}} expressions.
  * <p>
- * Interfejs oddziela aplikację od źródła tłumaczeń. Obecna implementacja czyta pliki {@code .properties},
- * ale można ją zastąpić np. implementacją opartą o bazę danych bez zmian w pozostałych warstwach.
+ * The interface separates the application from the translation source. The current implementation reads {@code .properties} files,
+ * but it can be replaced, e.g. with a database-backed implementation, without changes in the other layers.
  */
 public interface TranslationService {
 
     /**
-     * Zwraca tłumaczenie klucza w języku bieżącego żądania (lub domyślnym, gdy brak żądania).
+     * Returns the translation of the key in the language of the current request (or the default one when there is no request).
      *
-     * @param key  klucz tłumaczenia, np. {@code "ad.created.pending"}
-     * @param args opcjonalne argumenty wstawiane w miejsca {@code {0}}, {@code {1}}...
-     * @throws org.springframework.context.NoSuchMessageException gdy klucz nie istnieje
+     * @param key  translation key, e.g. {@code "ad.created.pending"}
+     * @param args optional arguments inserted in place of {@code {0}}, {@code {1}}...
+     * @throws org.springframework.context.NoSuchMessageException if the key does not exist
      */
     String get(String key, Object... args);
 
     /**
-     * Zwraca tłumaczenie klucza we wskazanym języku - przydatne poza żądaniem HTTP,
-     * np. przy wysyłce e-maili z kolejki.
+     * Returns the translation of the key in the given language - useful outside of an HTTP request,
+     * e.g. when sending emails from the queue.
      */
     String get(Locale locale, String key, Object... args);
 
     /**
-     * Zwraca tłumaczenie obiektu, który sam niesie klucz i argumenty (np. wyjątku biznesowego).
+     * Returns the translation of an object that carries its own key and arguments (e.g. a business exception).
      */
     String get(MessageSourceResolvable resolvable);
 
     /**
-     * Zwraca tłumaczenie klucza lub podaną wartość domyślną, gdy klucz nie istnieje.
-     * Przydatne dla danych, które nie zawsze mają tłumaczenie (np. kategorie dodane w bazie).
+     * Returns the translation of the key, or the given default value if the key does not exist.
+     * Useful for data that does not always have a translation (e.g. categories added in the database).
      */
     String getOrDefault(String key, String defaultValue, Object... args);
 
-    /** Zwraca język bieżącego żądania. */
+    /** Returns the language of the current request. */
     Locale getCurrentLocale();
 
-    /** Zwraca język domyślny aplikacji. */
+    /** Returns the application's default language. */
     Locale getDefaultLocale();
 
-    /** Zwraca listę języków obsługiwanych przez aplikację. */
+    /** Returns the list of languages supported by the application. */
     List<Locale> getSupportedLocales();
 }

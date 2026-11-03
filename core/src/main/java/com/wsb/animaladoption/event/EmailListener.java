@@ -23,7 +23,7 @@ public class EmailListener {
     public void handleRegistrationEmail(RegistrationEvent event) {
         log.info("Rozpoczynam wysyłkę e-maila weryfikacyjnego do: {}", event.getEmail());
         try {
-            // Listener działa poza żądaniem HTTP, więc język odbiorcy przychodzi w zdarzeniu
+            // The listener runs outside of an HTTP request, so the recipient's language comes with the event
             Locale locale = resolveLocale(event.getLanguageTag());
             String verificationLink = "http://localhost:8080/verify?token=" + event.getVerificationToken();
 
@@ -47,14 +47,14 @@ public class EmailListener {
 
             SimpleMailMessage message = new SimpleMailMessage();
             message.setTo(event.getOrganizationEmail());
-            // Ustawiamy Reply-To na maila użytkownika, aby fundacja mogła łatwo odpisać
+            // Set Reply-To to the user's email so the foundation can easily reply
             message.setReplyTo(event.getContactEmail());
             message.setSubject(translationService.get(locale, "email.adoption.subject", event.getAdTitle()));
             message.setText(translationService.get(locale, "email.adoption.body",
                     event.getOrganizationName(),
                     event.getAdTitle(),
                     event.getFirstName(), event.getLastName(),
-                    // jako tekst, aby MessageFormat nie sformatował roku jak liczby (np. "1 990")
+                    // as text, so MessageFormat does not format the year as a number (e.g. "1 990")
                     String.valueOf(event.getBirthYear()),
                     event.getAddress(), event.getCity(),
                     event.getPhone(),
@@ -68,7 +68,7 @@ public class EmailListener {
         }
     }
 
-    /** Zamienia tag języka ze zdarzenia na Locale; dla zdarzeń bez języka (np. starych z kolejki) - język domyślny. */
+    /** Converts the event's language tag to a Locale; events without a language (e.g. old ones from the queue) get the default language. */
     private Locale resolveLocale(String languageTag) {
         return languageTag == null || languageTag.isBlank()
                 ? translationService.getDefaultLocale()

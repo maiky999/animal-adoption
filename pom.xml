@@ -10,22 +10,22 @@
 	</parent>
 
 	<!--
-		Projekt nadrzędny (agregator). Nie zawiera kodu - spina moduły:
-		  - translations : osobny projekt z tłumaczeniami (i18n) i serwisem TranslationService
-		  - domain       : warstwa danych - encje JPA, enumy, repozytoria, wyjątki domenowe
-		  - core         : logika biznesowa - serwisy, DTO, zdarzenia i kolejki RabbitMQ
-		  - web          : aplikacja webowa (portal Łapka) - kontrolery, widoki, konfiguracja, klasa startowa
+		Parent project (aggregator). It contains no code - it ties the modules together:
+		  - translations : separate project with translations (i18n) and the TranslationService
+		  - domain       : data layer - JPA entities, enums, repositories, domain exceptions
+		  - core         : business logic - services, DTOs, RabbitMQ events and queues
+		  - web          : web application (Łapka portal) - controllers, views, configuration, main class
 
-		Zależności między modułami idą tylko w jedną stronę:  web -> core -> domain
-		Maven pilnuje tego podczas kompilacji - np. serwis z modułu core nie może użyć kontrolera z web,
-		bo core nie ma modułu web w swoich zależnościach.
+		Dependencies between modules go in one direction only:  web -> core -> domain
+		Maven enforces this at compile time - e.g. a service from the core module cannot use a controller from web,
+		because core does not have the web module in its dependencies.
 	-->
 	<groupId>com.wsb</groupId>
 	<artifactId>animaladoption-parent</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
 	<packaging>pom</packaging>
 	<name>animal-adoption-parent</name>
-	<description>Portal do adopcji zwierząt - projekt nadrzędny</description>
+	<description>Animal adoption portal - parent project</description>
 
 	<modules>
 		<module>translations</module>

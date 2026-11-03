@@ -19,13 +19,13 @@ class WebLocaleConfigurationTest {
             new TranslationAutoConfiguration.WebLocaleConfiguration(properties).localeResolver();
 
     @Test
-    @DisplayName("Bez ciasteczka i nagłówka przeglądarki powinien wybrać język domyślny")
+    @DisplayName("Should choose the default language without a cookie and browser header")
     void shouldUseDefaultLocaleWithoutHints() {
         assertThat(localeResolver.resolveLocale(new MockHttpServletRequest())).isEqualTo(PL);
     }
 
     @Test
-    @DisplayName("Powinien wybrać pierwszy obsługiwany język z nagłówka Accept-Language")
+    @DisplayName("Should choose the first supported language from the Accept-Language header")
     void shouldUseSupportedBrowserLanguage() {
         MockHttpServletRequest request = new MockHttpServletRequest();
         request.addHeader("Accept-Language", "de-DE,en-US;q=0.8,pl;q=0.5");
@@ -34,7 +34,7 @@ class WebLocaleConfigurationTest {
     }
 
     @Test
-    @DisplayName("Dla nieobsługiwanego języka przeglądarki powinien wybrać język domyślny")
+    @DisplayName("Should choose the default language for an unsupported browser language")
     void shouldFallbackForUnsupportedBrowserLanguage() {
         MockHttpServletRequest request = new MockHttpServletRequest();
         request.addHeader("Accept-Language", "de-DE");
@@ -43,7 +43,7 @@ class WebLocaleConfigurationTest {
     }
 
     @Test
-    @DisplayName("Parametr ?lang= powinien zmienić język i zapamiętać go w ciasteczku")
+    @DisplayName("The ?lang= parameter should change the language and remember it in a cookie")
     void shouldChangeLocaleWithParameter() throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest();
         request.addParameter("lang", "en");
@@ -58,7 +58,7 @@ class WebLocaleConfigurationTest {
     }
 
     @Test
-    @DisplayName("Nieobsługiwany język z parametru powinien zostać zastąpiony językiem domyślnym")
+    @DisplayName("An unsupported language from the parameter should be replaced with the default language")
     void shouldRejectUnsupportedLanguageParameter() throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest();
         request.addParameter("lang", "de");
