@@ -5,6 +5,7 @@ import com.wsb.translations.TranslationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Component;
@@ -19,13 +20,17 @@ public class EmailListener {
     private final JavaMailSender mailSender;
     private final TranslationService translationService;
 
+    /** Public address of the application used in links sent by email (e.g. https://lapka.pl), without a trailing slash. */
+    @Value("${app.base-url}")
+    private String baseUrl;
+
     @RabbitListener(queues = RabbitMQConfig.QUEUE_REGISTRATION)
     public void handleRegistrationEmail(RegistrationEvent event) {
         log.info("Rozpoczynam wysyłkę e-maila weryfikacyjnego do: {}", event.getEmail());
         try {
             // The listener runs outside of an HTTP request, so the recipient's language comes with the event
             Locale locale = resolveLocale(event.getLanguageTag());
-            String verificationLink = "http://localhost:8080/verify?token=" + event.getVerificationToken();
+            String verificationLink = baseUrl + "/verify?token=" + event.getVerificationToken();
 
             SimpleMailMessage message = new SimpleMailMessage();
             message.setTo(event.getEmail());
@@ -36,6 +41,26 @@ public class EmailListener {
             log.info("Wysłano e-mail weryfikacyjny do: {}", event.getEmail());
         } catch (Exception e) {
             log.error("Błąd poczas wysyłania maila potwierdzającego do: {}", event.getEmail(), e);
+        }
+    }
+
+    @RabbitListener(queues = RabbitMQConfig.QUEUE_EMAIL_CHANGE)
+    public void handleEmailChangeEmail(EmailChangeEvent event) {
+        log.info("Rozpoczynam wysyłkę potwierdzenia zmiany adresu e-mail do: {}", event.getNewEmail());
+        try {
+            Locale locale = resolveLocale(event.getLanguageTag());
+            // The same /verify endpoint as for registration - the service recognizes the email change by pendingEmail
+            String verificationLink = baseUrl + "/verify?token=" + event.getVerificationToken();
+
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setTo(event.getNewEmail());
+            message.setSubject(translationService.get(locale, "email.emailChange.subject"));
+            message.setText(translationService.get(locale, "email.emailChange.body", verificationLink));
+
+            mailSender.send(message);
+            log.info("Wysłano potwierdzenie zmiany adresu e-mail do: {}", event.getNewEmail());
+        } catch (Exception e) {
+            log.error("Błąd podczas wysyłania potwierdzenia zmiany adresu e-mail do: {}", event.getNewEmail(), e);
         }
     }
 

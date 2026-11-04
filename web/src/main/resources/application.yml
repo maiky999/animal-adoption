@@ -42,8 +42,10 @@ server:
 
 # Our own application configuration
 app:
+  # Public address of the application - used in links sent by email (e.g. the account verification link)
+  base-url: ${APP_BASE_URL:http://localhost:${SERVER_PORT:8080}}
   security:
     # Key for the "Remember me" feature
     remember-me-key: ${REMEMBER_ME_KEY}
-    # Key for encrypting sensitive data in the database (always 16, 24 or 32 characters for AES)
+    # Key for encrypting sensitive data in the database (any length - a 256-bit AES key is derived from it with SHA-256)
     crypto-key: ${CRYPTO_KEY}

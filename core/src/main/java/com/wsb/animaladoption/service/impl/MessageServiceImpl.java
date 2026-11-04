@@ -1,8 +1,7 @@
 package com.wsb.animaladoption.service.impl;
 
-import com.wsb.animaladoption.config.RabbitMQConfig;
 import com.wsb.animaladoption.dto.ConversationPreviewDto;
-import com.wsb.animaladoption.event.ChatMessageEvent;
+import com.wsb.animaladoption.enums.AdStatusEnum;
 import com.wsb.animaladoption.model.Ad;
 import com.wsb.animaladoption.model.Message;
 import com.wsb.animaladoption.model.User;
@@ -12,7 +11,6 @@ import com.wsb.animaladoption.repository.UserRepository;
 import com.wsb.animaladoption.service.MessageService;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
-import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -26,40 +24,64 @@ public class MessageServiceImpl implements MessageService {
     private final MessageRepository messageRepository;
     private final UserRepository userRepository;
     private final AdRepository adRepository;
-    private final RabbitTemplate rabbitTemplate;
 
-    @Override
-    public void sendMessage(String senderEmail, Long receiverId, Long adId, String content) {
-        ChatMessageEvent event = new ChatMessageEvent(senderEmail, receiverId, adId, content);
-        rabbitTemplate.convertAndSend(RabbitMQConfig.EXCHANGE_CHAT, RabbitMQConfig.ROUTING_KEY_CHAT, event);
-    }
-
+    /**
+     * The message is saved synchronously, inside the HTTP request. Previously it went through a RabbitMQ queue
+     * and was saved in the background - the controller redirected to the chat before the listener saved it,
+     * so the just-sent message was sometimes missing on the page (race condition).
+     * Saving one row is fast, so there is no benefit from doing it asynchronously.
+     */
     @Override
     @Transactional
-    public void saveMessageToDatabase(ChatMessageEvent event) {
-        User sender = userRepository.findByEmail(event.getSenderEmail())
+    public void sendMessage(String senderEmail, Long receiverId, Long adId, String content) {
+        User sender = userRepository.findByEmail(senderEmail)
                 .orElseThrow(() -> new IllegalArgumentException("Nie znaleziono nadawcy"));
-        User receiver = userRepository.findById(event.getReceiverId())
+        User receiver = userRepository.findById(receiverId)
                 .orElseThrow(() -> new IllegalArgumentException("Nie znaleziono odbiorcy"));
-        Ad ad = adRepository.findById(event.getAdId())
+        Ad ad = adRepository.findById(adId)
                 .orElseThrow(() -> new IllegalArgumentException("Nie znaleziono ogłoszenia"));
+
+        // Checked here as well (not only in the controller), so the rule cannot be bypassed by any caller
+        if (!canAccessConversation(ad, sender, receiver)) {
+            throw new SecurityException("Brak dostępu do tej rozmowy");
+        }
 
         Message message = Message.builder()
                 .sender(sender)
                 .receiver(receiver)
                 .relatedAd(ad)
-                .content(event.getContent())
+                .content(content)
                 .isRead(false)
                 .build();
 
-        messageRepository.saveAndFlush(message);
+        messageRepository.save(message);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public boolean canAccessConversation(Ad ad, User currentUser, User otherUser) {
+        // You cannot talk to yourself
+        if (currentUser.getId().equals(otherUser.getId())) {
+            return false;
+        }
+        // One side of the conversation must be the listing author
+        Long authorId = ad.getAuthor().getId();
+        if (!authorId.equals(currentUser.getId()) && !authorId.equals(otherUser.getId())) {
+            return false;
+        }
+        // An existing conversation is always available (e.g. the author answering, or after the animal was adopted)
+        if (messageRepository.existsConversation(ad.getId(), currentUser.getId(), otherUser.getId())) {
+            return true;
+        }
+        // A new conversation: only an interested user writing to the author of an active listing
+        return authorId.equals(otherUser.getId()) && ad.getStatus() == AdStatusEnum.ACTIVE;
     }
 
     @Override
     @Transactional
     public List<Message> getConversationAndMarkAsRead(String currentUserEmail, Long otherUserId, Long adId) {
         User currentUser = userRepository.findByEmail(currentUserEmail).orElseThrow();
-        List<Message> conversation = messageRepository.findConversation(adId, currentUser.getId(), otherUserId);
+        // First mark as read, then load - this way the returned messages already have the current isRead flag
         messageRepository.markConversationAsRead(adId, otherUserId, currentUser.getId());
         return messageRepository.findConversation(adId, currentUser.getId(), otherUserId);
     }

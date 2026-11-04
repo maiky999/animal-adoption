@@ -1,6 +1,7 @@
 package com.wsb.animaladoption.controller;
 
 import com.wsb.animaladoption.dto.ArticleCreateDto;
+import com.wsb.animaladoption.exception.LocalizedException;
 import com.wsb.animaladoption.service.ArticleService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -36,7 +37,13 @@ public class ModerationArticleController {
             return "moderation/article-form";
         }
 
-        articleService.createArticle(dto, currentUser.getUsername());
+        try {
+            articleService.createArticle(dto, currentUser.getUsername());
+        } catch (LocalizedException e) {
+            // e.g. the uploaded file is not an image - shown under the image field
+            bindingResult.rejectValue("imageFile", e.getMessageKey());
+            return "moderation/article-form";
+        }
         redirectAttributes.addFlashAttribute("infoMessage", "articles.published");
 
         return "redirect:/articles";

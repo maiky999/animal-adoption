@@ -3,6 +3,7 @@ package com.wsb.animaladoption.service;
 import com.wsb.animaladoption.dto.UserPasswordUpdateDto;
 import com.wsb.animaladoption.dto.UserProfileUpdateDto;
 import com.wsb.animaladoption.dto.UserRegistrationDto;
+import com.wsb.animaladoption.dto.VerificationResult;
 import com.wsb.animaladoption.model.User;
 
 /**
@@ -14,18 +15,23 @@ public interface UserService {
     User registerNewUser(UserRegistrationDto dto);
 
     /**
-     * Activates the account based on the verification token.
-     *
-     * @return {@code true} if the token exists and has not expired
+     * Handles a verification link: activates a new account or, if the user requested an email change,
+     * replaces their email with the confirmed new address.
      */
-    boolean verifyEmail(String token);
+    VerificationResult verifyEmail(String token);
 
     /**
      * Updates the user's profile data (including the avatar).
+     * A changed email is not applied immediately - it is stored as pending and a confirmation link
+     * is sent to the new address (see {@link #verifyEmail(String)}).
      *
+     * @return {@code true} if an email change confirmation was sent
      * @throws IllegalArgumentException if the new email is already used by another account
      */
-    void updateUserProfile(String currentEmail, UserProfileUpdateDto dto);
+    boolean updateUserProfile(String currentEmail, UserProfileUpdateDto dto);
+
+    /** Checks whether an account with the given email exists. */
+    boolean existsByEmail(String email);
 
     /**
      * Changes the user's password after verifying the current password.

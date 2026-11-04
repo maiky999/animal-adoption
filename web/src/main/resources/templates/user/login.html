@@ -31,6 +31,12 @@
       <span th:text="#{${errorMessage}}"></span>
     </div>
 
+    <!-- The session was logged out because the account's email changed (e.g. on another device) -->
+    <div th:if="${param.expired}" class="bg-blue-50 text-blue-700 p-4 rounded-xl text-sm mb-6 border border-blue-100 flex items-center shadow-sm fade-in">
+      <i class="ph-fill ph-info text-2xl mr-2"></i>
+      <span>[[#{login.sessionExpired}]]</span>
+    </div>
+
     <!-- Standard login error (wrong password / no such user) -->
     <div th:if="${param.error} and (${session['SPRING_SECURITY_LAST_EXCEPTION']} == null or !${#strings.contains(session['SPRING_SECURITY_LAST_EXCEPTION'].toString(), 'DisabledException')})"
          class="bg-red-50 text-red-600 p-4 rounded-xl text-sm mb-6 border border-red-100 flex items-center shadow-sm fade-in">

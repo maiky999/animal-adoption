@@ -7,9 +7,9 @@ import com.wsb.animaladoption.repository.ArticleRepository;
 import com.wsb.animaladoption.repository.UserRepository;
 import com.wsb.animaladoption.service.ArticleService;
 import com.wsb.animaladoption.service.FileStorageService;
-import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 

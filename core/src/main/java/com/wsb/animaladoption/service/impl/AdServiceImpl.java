@@ -4,12 +4,15 @@ import com.wsb.animaladoption.config.RabbitMQConfig;
 import com.wsb.animaladoption.dto.AdCreateDto;
 import com.wsb.animaladoption.dto.AdoptionFormDto;
 import com.wsb.animaladoption.enums.AdStatusEnum;
+import com.wsb.animaladoption.enums.UserTypeEnum;
 import com.wsb.animaladoption.event.AdoptionFormEvent;
+import com.wsb.animaladoption.exception.LocalizedException;
 import com.wsb.animaladoption.model.Ad;
 import com.wsb.animaladoption.model.Category;
 import com.wsb.animaladoption.model.User;
 import com.wsb.animaladoption.repository.AdRepository;
 import com.wsb.animaladoption.repository.CategoryRepository;
+import com.wsb.animaladoption.repository.MessageRepository;
 import com.wsb.animaladoption.repository.UserRepository;
 import com.wsb.animaladoption.service.AdService;
 import com.wsb.animaladoption.service.FileStorageService;
@@ -27,6 +30,7 @@ public class AdServiceImpl implements AdService {
     private final AdRepository adRepository;
     private final CategoryRepository categoryRepository;
     private final UserRepository userRepository;
+    private final MessageRepository messageRepository;
     private final FileStorageService fileStorageService;
     private final RabbitTemplate rabbitTemplate;
     private final TranslationService translationService;
@@ -42,6 +46,27 @@ public class AdServiceImpl implements AdService {
     @Override
     public Ad findById(Long id) {
         return adRepository.findById(id).orElseThrow(() -> new IllegalArgumentException("Nie znaleziono ogłoszenia"));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public boolean canView(Ad ad, String viewerEmail, boolean viewerIsModerator) {
+        if (ad.getStatus() == AdStatusEnum.ACTIVE) {
+            return true;
+        }
+
+        if (viewerIsModerator) {
+            return true;
+        }
+        if (viewerEmail == null) {
+            return false;
+        }
+
+        if (ad.getAuthor().getEmail().equalsIgnoreCase(viewerEmail)) {
+            return true;
+        }
+
+        return messageRepository.existsConversationAboutAd(ad.getId(), viewerEmail);
     }
 
     @Override
@@ -130,8 +155,15 @@ public class AdServiceImpl implements AdService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public void processAdoptionForm(Long adId, AdoptionFormDto dto) {
         Ad ad = findById(adId);
+
+        // The questionnaire exists only for organizations (private persons are contacted via chat)
+        // and only for listings that are currently published
+        if (ad.getAuthor().getUserType() != UserTypeEnum.ORGANIZATION || ad.getStatus() != AdStatusEnum.ACTIVE) {
+            throw new LocalizedException("adoption.form.unavailable");
+        }
 
         AdoptionFormEvent event = new AdoptionFormEvent(
                 ad.getAuthor().getEmail(),

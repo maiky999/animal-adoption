@@ -4,7 +4,10 @@ import com.wsb.animaladoption.config.RabbitMQConfig;
 import com.wsb.animaladoption.dto.UserPasswordUpdateDto;
 import com.wsb.animaladoption.dto.UserProfileUpdateDto;
 import com.wsb.animaladoption.dto.UserRegistrationDto;
+import com.wsb.animaladoption.dto.VerificationResult;
 import com.wsb.animaladoption.enums.RoleEnum;
+import com.wsb.animaladoption.enums.VerificationResultEnum;
+import com.wsb.animaladoption.event.EmailChangeEvent;
 import com.wsb.animaladoption.event.RegistrationEvent;
 import com.wsb.animaladoption.exception.LocalizedException;
 import com.wsb.animaladoption.model.User;
@@ -61,34 +64,54 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional
-    public boolean verifyEmail(String token) {
+    public VerificationResult verifyEmail(String token) {
         Optional<VerificationToken> tokenOptional = tokenRepository.findByToken(token);
-
-        if (tokenOptional.isPresent()) {
-            VerificationToken verificationToken = tokenOptional.get();
-            if (verificationToken.getExpiryDate().isAfter(LocalDateTime.now())) {
-                User user = verificationToken.getUser();
-                user.setEmailVerified(true);
-                userRepository.save(user);
-
-                tokenRepository.delete(verificationToken);
-                return true;
-            }
+        if (tokenOptional.isEmpty() || !tokenOptional.get().getExpiryDate().isAfter(LocalDateTime.now())) {
+            return VerificationResult.invalid();
         }
-        return false;
+
+        VerificationToken verificationToken = tokenOptional.get();
+        User user = verificationToken.getUser();
+        String previousEmail = user.getEmail();
+        VerificationResultEnum status;
+
+        if (user.getPendingEmail() != null) {
+            // Link from an email change - the new address is confirmed, so it becomes the login
+            String newEmail = user.getPendingEmail();
+            user.setPendingEmail(null);
+            // Someone could have registered with this address after the change was requested
+            if (userRepository.existsByEmail(newEmail)) {
+                status = VerificationResultEnum.EMAIL_TAKEN;
+            } else {
+                user.setEmail(newEmail);
+                status = VerificationResultEnum.EMAIL_CHANGED;
+            }
+        } else {
+            // Link from the registration email
+            user.setEmailVerified(true);
+            status = VerificationResultEnum.ACCOUNT_VERIFIED;
+        }
+
+        userRepository.save(user);
+        tokenRepository.delete(verificationToken);
+        return new VerificationResult(status, previousEmail, user.getEmail());
     }
 
     @Override
     @Transactional
-    public void updateUserProfile(String currentEmail, UserProfileUpdateDto dto) {
+    public boolean updateUserProfile(String currentEmail, UserProfileUpdateDto dto) {
         User user = userRepository.findByEmail(currentEmail)
                 .orElseThrow(() -> new IllegalArgumentException("Nie znaleziono użytkownika"));
 
-        if (!user.getEmail().equalsIgnoreCase(dto.getEmail())) {
-            if (userRepository.existsByEmail(dto.getEmail())) {
+        // Emails are stored normalized (like in CustomUserDetailsService), so the comparison and the check use that form
+        String newEmail = dto.getEmail().trim().toLowerCase();
+        boolean emailChangeRequested = !user.getEmail().equalsIgnoreCase(newEmail);
+        if (emailChangeRequested) {
+            if (userRepository.existsByEmail(newEmail)) {
                 throw new LocalizedException("profile.error.emailTaken");
             }
-            user.setEmail(dto.getEmail().trim().toLowerCase());
+            // The login does not change yet - only after clicking the link sent to the new address
+            user.setPendingEmail(newEmail);
         }
 
         user.setDisplayName(dto.getDisplayName());
@@ -96,15 +119,38 @@ public class UserServiceImpl implements UserService {
         user.setDescription(dto.getDescription());
 
         if (dto.getAvatarFile() != null && !dto.getAvatarFile().isEmpty()) {
+            // Save the new file first - if it is rejected (e.g. not an image), the old avatar stays untouched
+            String avatarPath = fileStorageService.storeFile(dto.getAvatarFile());
             if (user.getAvatarUrl() != null) {
                 fileStorageService.deleteFile(user.getAvatarUrl());
             }
-
-            String avatarPath = fileStorageService.storeFile(dto.getAvatarFile());
             user.setAvatarUrl(avatarPath);
         }
 
         userRepository.save(user);
+
+        if (emailChangeRequested) {
+            sendEmailChangeConfirmation(user, newEmail);
+        }
+        return emailChangeRequested;
+    }
+
+    /** Creates (or renews) the user's verification token and sends the confirmation link to the new address. */
+    private void sendEmailChangeConfirmation(User user, String newEmail) {
+        String token = UUID.randomUUID().toString();
+        VerificationToken verificationToken = tokenRepository.findByUser(user)
+                .orElseGet(() -> new VerificationToken(token, user));
+        verificationToken.renew(token);
+        tokenRepository.save(verificationToken);
+
+        EmailChangeEvent event = new EmailChangeEvent(newEmail, token,
+                translationService.getCurrentLocale().toLanguageTag());
+        rabbitTemplate.convertAndSend(RabbitMQConfig.EXCHANGE_EMAIL, RabbitMQConfig.ROUTING_KEY_EMAIL_CHANGE, event);
+    }
+
+    @Override
+    public boolean existsByEmail(String email) {
+        return userRepository.existsByEmail(email);
     }
 
     @Override

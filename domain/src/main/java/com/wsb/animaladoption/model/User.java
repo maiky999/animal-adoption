@@ -24,6 +24,13 @@ public class User {
     @Column(unique = true, nullable = false)
     private String email;
 
+    /**
+     * New email address waiting for confirmation. When the user changes their email in the profile,
+     * the current address stays active until they click the link sent to the new one -
+     * this way a typo in the new address cannot lock them out of the account.
+     */
+    private String pendingEmail;
+
     @Column(nullable = false)
     private String passwordHash;
 

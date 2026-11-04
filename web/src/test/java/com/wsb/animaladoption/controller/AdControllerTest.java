@@ -28,6 +28,7 @@ import java.util.Collections;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -98,6 +99,7 @@ class AdControllerTest {
                 .build();
 
         when(adService.findById(1L)).thenReturn(ad);
+        when(adService.canView(eq(ad), any(), anyBoolean())).thenReturn(true);
 
         mockMvc.perform(get("/ads/1"))
                 .andExpect(status().isOk())
@@ -105,6 +107,18 @@ class AdControllerTest {
                 .andExpect(model().attribute("ad", ad));
 
         verify(adService, times(1)).findById(1L);
+    }
+
+    @Test
+    @DisplayName("GET /ads/{id} - should return 404 when the viewer may not see the listing (e.g. pending)")
+    void shouldReturnNotFoundForHiddenAd() throws Exception {
+        Ad ad = Ad.builder().id(2L).status(AdStatusEnum.PENDING).build();
+
+        when(adService.findById(2L)).thenReturn(ad);
+        when(adService.canView(eq(ad), any(), anyBoolean())).thenReturn(false);
+
+        mockMvc.perform(get("/ads/2"))
+                .andExpect(status().isNotFound());
     }
 
     @Test

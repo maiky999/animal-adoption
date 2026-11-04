@@ -23,8 +23,17 @@ public class VerificationToken {
     private LocalDateTime expiryDate;
 
     public VerificationToken(String token, User user) {
-        this.token = token;
         this.user = user;
+        renew(token);
+    }
+
+    /**
+     * Replaces the token value and restarts its 24-hour validity.
+     * Used when the user already has a token (e.g. changes their email again) - the relation is one-to-one,
+     * so the existing row is reused instead of creating a second one.
+     */
+    public void renew(String newToken) {
+        this.token = newToken;
         this.expiryDate = LocalDateTime.now().plusHours(24);
     }
 

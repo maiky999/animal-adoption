@@ -12,9 +12,10 @@ import java.util.List;
 public interface FileStorageService {
 
     /**
-     * Saves a file.
+     * Saves an image file (JPG, PNG, GIF or WEBP) under a random name.
      *
      * @return public URL of the file, or {@code null} if the file is empty
+     * @throws com.wsb.animaladoption.exception.LocalizedException if the file is not an allowed image
      */
     String storeFile(MultipartFile file);
 

@@ -19,7 +19,20 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
                                    @Param("user1Id") Long user1Id,
                                    @Param("user2Id") Long user2Id);
 
+    /** Checks whether the two users have exchanged at least one message about the given listing. */
+    @Query("SELECT COUNT(m) > 0 FROM Message m WHERE m.relatedAd.id = :adId AND " +
+            "((m.sender.id = :user1Id AND m.receiver.id = :user2Id) OR " +
+            "(m.sender.id = :user2Id AND m.receiver.id = :user1Id))")
+    boolean existsConversation(@Param("adId") Long adId,
+                               @Param("user1Id") Long user1Id,
+                               @Param("user2Id") Long user2Id);
+
     long countByReceiverIdAndIsReadFalse(Long receiverId);
+
+    /** Checks whether the user has sent or received at least one message about the given listing. */
+    @Query("SELECT COUNT(m) > 0 FROM Message m WHERE m.relatedAd.id = :adId AND " +
+            "(m.sender.email = :email OR m.receiver.email = :email)")
+    boolean existsConversationAboutAd(@Param("adId") Long adId, @Param("email") String email);
 
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("UPDATE Message m SET m.isRead = true WHERE m.relatedAd.id = :adId AND m.sender.id = :senderId AND m.receiver.id = :receiverId AND m.isRead = false")
