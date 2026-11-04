@@ -1,7 +1,10 @@
 package com.wsb.animaladoption.controller;
 
+import com.wsb.animaladoption.config.SessionAuthenticationUpdater;
 import com.wsb.animaladoption.dto.UserRegistrationDto;
+import com.wsb.animaladoption.dto.VerificationResult;
 import com.wsb.animaladoption.enums.UserTypeEnum;
+import com.wsb.animaladoption.enums.VerificationResultEnum;
 import com.wsb.animaladoption.service.UserService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -25,6 +28,9 @@ class AuthControllerTest {
 
     @Mock
     private UserService userService;
+
+    @Mock
+    private SessionAuthenticationUpdater sessionAuthenticationUpdater;
 
     @InjectMocks
     private AuthController authController;
@@ -56,7 +62,8 @@ class AuthControllerTest {
     @Test
     @DisplayName("GET /verify - should redirect to login with a success message")
     void shouldVerifyEmailSuccessfully() throws Exception {
-        when(userService.verifyEmail("valid-token")).thenReturn(true);
+        when(userService.verifyEmail("valid-token")).thenReturn(
+                new VerificationResult(VerificationResultEnum.ACCOUNT_VERIFIED, "jan@example.com", "jan@example.com"));
 
         mockMvc.perform(get("/verify").param("token", "valid-token"))
                 .andExpect(status().is3xxRedirection())
@@ -69,7 +76,7 @@ class AuthControllerTest {
     @Test
     @DisplayName("GET /verify - should redirect to login with an error message when the token is invalid")
     void shouldFailEmailVerificationWhenTokenInvalid() throws Exception {
-        when(userService.verifyEmail("invalid-token")).thenReturn(false);
+        when(userService.verifyEmail("invalid-token")).thenReturn(VerificationResult.invalid());
 
         mockMvc.perform(get("/verify").param("token", "invalid-token"))
                 .andExpect(status().is3xxRedirection())

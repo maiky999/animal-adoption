@@ -3,9 +3,13 @@ package com.wsb.animaladoption.service;
 import com.wsb.animaladoption.service.impl.UserServiceImpl;
 import com.wsb.animaladoption.config.RabbitMQConfig;
 import com.wsb.animaladoption.dto.UserPasswordUpdateDto;
+import com.wsb.animaladoption.dto.UserProfileUpdateDto;
 import com.wsb.animaladoption.dto.UserRegistrationDto;
+import com.wsb.animaladoption.dto.VerificationResult;
 import com.wsb.animaladoption.enums.RoleEnum;
 import com.wsb.animaladoption.enums.UserTypeEnum;
+import com.wsb.animaladoption.enums.VerificationResultEnum;
+import com.wsb.animaladoption.event.EmailChangeEvent;
 import com.wsb.animaladoption.event.RegistrationEvent;
 import com.wsb.animaladoption.exception.LocalizedException;
 import com.wsb.animaladoption.model.User;
@@ -112,9 +116,9 @@ class UserServiceTest {
 
         when(tokenRepository.findByToken(tokenStr)).thenReturn(Optional.of(token));
 
-        boolean result = userService.verifyEmail(tokenStr);
+        VerificationResult result = userService.verifyEmail(tokenStr);
 
-        assertTrue(result);
+        assertEquals(VerificationResultEnum.ACCOUNT_VERIFIED, result.status());
         assertTrue(sampleUser.isEmailVerified());
         verify(userRepository, times(1)).save(sampleUser);
         verify(tokenRepository, times(1)).delete(token);
@@ -129,12 +133,74 @@ class UserServiceTest {
 
         when(tokenRepository.findByToken(tokenStr)).thenReturn(Optional.of(token));
 
-        boolean result = userService.verifyEmail(tokenStr);
+        VerificationResult result = userService.verifyEmail(tokenStr);
 
-        assertFalse(result);
+        assertEquals(VerificationResultEnum.INVALID, result.status());
         assertFalse(sampleUser.isEmailVerified());
         verify(userRepository, never()).save(any());
         verify(tokenRepository, never()).delete(any());
+    }
+
+    @Test
+    @DisplayName("Should not change the email immediately, but store it as pending and send a confirmation link")
+    void shouldStoreNewEmailAsPendingAndSendConfirmation() {
+        UserProfileUpdateDto dto = new UserProfileUpdateDto();
+        dto.setEmail(" Nowy@WSB.pl ");
+        dto.setDisplayName("Jan Tester");
+        dto.setMobile("123456789");
+
+        when(userRepository.findByEmail("test@wsb.pl")).thenReturn(Optional.of(sampleUser));
+        when(userRepository.existsByEmail("nowy@wsb.pl")).thenReturn(false);
+        when(tokenRepository.findByUser(sampleUser)).thenReturn(Optional.empty());
+        when(translationService.getCurrentLocale()).thenReturn(Locale.of("pl"));
+
+        boolean emailChangePending = userService.updateUserProfile("test@wsb.pl", dto);
+
+        assertTrue(emailChangePending);
+        assertEquals("test@wsb.pl", sampleUser.getEmail(), "login nie może się zmienić przed potwierdzeniem");
+        assertEquals("nowy@wsb.pl", sampleUser.getPendingEmail());
+        verify(tokenRepository, times(1)).save(any(VerificationToken.class));
+
+        ArgumentCaptor<EmailChangeEvent> eventCaptor = ArgumentCaptor.forClass(EmailChangeEvent.class);
+        verify(rabbitTemplate).convertAndSend(eq(RabbitMQConfig.EXCHANGE_EMAIL),
+                eq(RabbitMQConfig.ROUTING_KEY_EMAIL_CHANGE), eventCaptor.capture());
+        assertEquals("nowy@wsb.pl", eventCaptor.getValue().getNewEmail());
+    }
+
+    @Test
+    @DisplayName("Should switch to the pending email after the confirmation link is clicked")
+    void shouldChangeEmailWhenPendingEmailConfirmed() {
+        sampleUser.setEmailVerified(true);
+        sampleUser.setPendingEmail("nowy@wsb.pl");
+        VerificationToken token = new VerificationToken("change-token", sampleUser);
+
+        when(tokenRepository.findByToken("change-token")).thenReturn(Optional.of(token));
+        when(userRepository.existsByEmail("nowy@wsb.pl")).thenReturn(false);
+
+        VerificationResult result = userService.verifyEmail("change-token");
+
+        assertEquals(VerificationResultEnum.EMAIL_CHANGED, result.status());
+        assertEquals("test@wsb.pl", result.previousEmail());
+        assertEquals("nowy@wsb.pl", result.currentEmail());
+        assertEquals("nowy@wsb.pl", sampleUser.getEmail());
+        assertNull(sampleUser.getPendingEmail());
+        verify(tokenRepository).delete(token);
+    }
+
+    @Test
+    @DisplayName("Should cancel the email change when the new address was taken in the meantime")
+    void shouldNotChangeEmailWhenTakenInTheMeantime() {
+        sampleUser.setPendingEmail("zajety@wsb.pl");
+        VerificationToken token = new VerificationToken("change-token", sampleUser);
+
+        when(tokenRepository.findByToken("change-token")).thenReturn(Optional.of(token));
+        when(userRepository.existsByEmail("zajety@wsb.pl")).thenReturn(true);
+
+        VerificationResult result = userService.verifyEmail("change-token");
+
+        assertEquals(VerificationResultEnum.EMAIL_TAKEN, result.status());
+        assertEquals("test@wsb.pl", sampleUser.getEmail());
+        assertNull(sampleUser.getPendingEmail());
     }
 
     @Test

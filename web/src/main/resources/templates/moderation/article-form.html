@@ -42,6 +42,7 @@
 
           <img id="imagePreview" class="hidden absolute inset-0 w-full h-full object-cover rounded-3xl" />
         </div>
+        <p th:if="${#fields.hasErrors('imageFile')}" th:errors="*{imageFile}" class="mt-2 text-sm text-red-500 font-bold flex items-center"><i class="ph-fill ph-warning-circle mr-1"></i></p>
       </div>
 
       <!-- Content -->

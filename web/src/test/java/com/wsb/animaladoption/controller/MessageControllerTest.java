@@ -98,6 +98,7 @@ class MessageControllerTest {
         when(userService.findByEmail("test@example.com")).thenReturn(me);
         when(userService.findById(2L)).thenReturn(otherUser);
         when(adService.findById(10L)).thenReturn(ad);
+        when(messageService.canAccessConversation(ad, me, otherUser)).thenReturn(true);
         when(messageService.getConversationAndMarkAsRead("test@example.com", 2L, 10L)).thenReturn(Collections.emptyList());
 
         mockMvc.perform(get("/messages/10/2"))
@@ -109,6 +110,34 @@ class MessageControllerTest {
                 .andExpect(model().attributeExists("messages"));
 
         verify(messageService, times(1)).getConversationAndMarkAsRead("test@example.com", 2L, 10L);
+    }
+
+    @Test
+    @DisplayName("GET /messages/{adId}/{otherUserId} - should return 404 when the conversation is not allowed")
+    void shouldReturnNotFoundForForbiddenConversation() throws Exception {
+        User me = User.builder().id(1L).email("test@example.com").build();
+        User otherUser = User.builder().id(2L).email("other@example.com").build();
+        Ad ad = Ad.builder().id(10L).title("Ukryte ogłoszenie").build();
+
+        when(userService.findByEmail("test@example.com")).thenReturn(me);
+        when(userService.findById(2L)).thenReturn(otherUser);
+        when(adService.findById(10L)).thenReturn(ad);
+        when(messageService.canAccessConversation(ad, me, otherUser)).thenReturn(false);
+
+        mockMvc.perform(get("/messages/10/2"))
+                .andExpect(status().isNotFound());
+
+        verify(messageService, never()).getConversationAndMarkAsRead(any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("POST /messages/{adId}/{otherUserId} - should return 404 when the service rejects the conversation")
+    void shouldReturnNotFoundWhenSendingToForbiddenConversation() throws Exception {
+        doThrow(new SecurityException("Brak dostępu"))
+                .when(messageService).sendMessage("test@example.com", 2L, 10L, "Hej");
+
+        mockMvc.perform(post("/messages/10/2").param("content", "Hej"))
+                .andExpect(status().isNotFound());
     }
 
     @Test

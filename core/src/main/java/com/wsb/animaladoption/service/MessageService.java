@@ -1,8 +1,9 @@
 package com.wsb.animaladoption.service;
 
 import com.wsb.animaladoption.dto.ConversationPreviewDto;
-import com.wsb.animaladoption.event.ChatMessageEvent;
+import com.wsb.animaladoption.model.Ad;
 import com.wsb.animaladoption.model.Message;
+import com.wsb.animaladoption.model.User;
 
 import java.util.List;
 
@@ -11,11 +12,24 @@ import java.util.List;
  */
 public interface MessageService {
 
-    /** Sends a message asynchronously - it goes to the queue and is saved to the database in the background. */
+    /**
+     * Sends a message - it is saved to the database immediately, so it is visible right after the redirect.
+     *
+     * @throws IllegalArgumentException if the sender, recipient or listing does not exist
+     * @throws SecurityException        if the sender may not write in this conversation
+     *                                  (see {@link #canAccessConversation(Ad, User, User)})
+     */
     void sendMessage(String senderEmail, Long receiverId, Long adId, String content);
 
-    /** Saves a message received from the queue to the database. */
-    void saveMessageToDatabase(ChatMessageEvent event);
+    /**
+     * Checks whether the user may open (and write in) the conversation with another user about a listing.
+     * <ul>
+     *     <li>a conversation always takes place between the listing author and another user,</li>
+     *     <li>an existing conversation stays available regardless of the listing status (e.g. after adoption),</li>
+     *     <li>a new conversation can only be started by a non-author, about an active listing.</li>
+     * </ul>
+     */
+    boolean canAccessConversation(Ad ad, User currentUser, User otherUser);
 
     /** Returns the conversation between two users about a listing and marks received messages as read. */
     List<Message> getConversationAndMarkAsRead(String currentUserEmail, Long otherUserId, Long adId);

@@ -13,27 +13,15 @@ public class RabbitMQConfig {
     public static final String QUEUE_REGISTRATION = "queue.email.registration";
     public static final String ROUTING_KEY_REGISTRATION = "routing.key.registration";
 
-    public static final String QUEUE_CHAT = "chat.queue";
-    public static final String EXCHANGE_CHAT = "chat.exchange";
-    public static final String ROUTING_KEY_CHAT = "chat.routing.key";
-
     public static final String QUEUE_ADOPTION_FORM = "queue.email.adoption_form";
     public static final String ROUTING_KEY_ADOPTION_FORM = "routing.key.adoption_form";
 
-    @Bean
-    public Queue chatQueue() {
-        return new Queue(QUEUE_CHAT, true);
-    }
+    public static final String QUEUE_EMAIL_CHANGE = "queue.email.email_change";
+    public static final String ROUTING_KEY_EMAIL_CHANGE = "routing.key.email_change";
 
-    @Bean
-    public DirectExchange chatExchange() {
-        return new DirectExchange(EXCHANGE_CHAT);
-    }
-
-    @Bean
-    public Binding chatBinding(Queue chatQueue, DirectExchange chatExchange) {
-        return BindingBuilder.bind(chatQueue).to(chatExchange).with(ROUTING_KEY_CHAT);
-    }
+    // Chat messages are not sent through the queue - they are saved synchronously (see MessageServiceImpl.sendMessage),
+    // so the sender sees their message immediately. The queue is used for emails, where waiting for SMTP
+    // would slow down the request and a delay of a few seconds does not matter.
 
     @Bean
     public TopicExchange emailExchange() {
@@ -58,6 +46,16 @@ public class RabbitMQConfig {
     @Bean
     public Binding bindingAdoptionForm(Queue adoptionFormQueue, TopicExchange emailExchange) {
         return BindingBuilder.bind(adoptionFormQueue).to(emailExchange).with(ROUTING_KEY_ADOPTION_FORM);
+    }
+
+    @Bean
+    public Queue emailChangeQueue() {
+        return new Queue(QUEUE_EMAIL_CHANGE, true);
+    }
+
+    @Bean
+    public Binding bindingEmailChange(Queue emailChangeQueue, TopicExchange emailExchange) {
+        return BindingBuilder.bind(emailChangeQueue).to(emailExchange).with(ROUTING_KEY_EMAIL_CHANGE);
     }
 
     @Bean

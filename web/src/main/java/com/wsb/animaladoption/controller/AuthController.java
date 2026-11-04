@@ -1,10 +1,15 @@
 package com.wsb.animaladoption.controller;
 
+import com.wsb.animaladoption.config.SessionAuthenticationUpdater;
 import com.wsb.animaladoption.dto.UserRegistrationDto;
+import com.wsb.animaladoption.dto.VerificationResult;
 import com.wsb.animaladoption.service.UserService;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
@@ -18,6 +23,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 @RequiredArgsConstructor
 public class AuthController {
     private final UserService userService;
+    private final SessionAuthenticationUpdater sessionAuthenticationUpdater;
 
     @GetMapping("/login")
     public String showLoginForm() {
@@ -31,13 +37,26 @@ public class AuthController {
     }
 
     @GetMapping("/verify")
-    public String verifyEmail(@RequestParam("token") String token, RedirectAttributes redirectAttributes) {
-        boolean isVerified = userService.verifyEmail(token);
+    public String verifyEmail(@RequestParam("token") String token,
+                              Authentication authentication,
+                              HttpServletRequest request,
+                              HttpServletResponse response,
+                              RedirectAttributes redirectAttributes) {
+        VerificationResult result = userService.verifyEmail(token);
 
-        if (isVerified) {
-            redirectAttributes.addFlashAttribute("successMessage", "verify.success");
-        } else {
-            redirectAttributes.addFlashAttribute("errorMessage", "verify.invalid");
+        switch (result.status()) {
+            case ACCOUNT_VERIFIED -> redirectAttributes.addFlashAttribute("successMessage", "verify.success");
+            case EMAIL_TAKEN -> redirectAttributes.addFlashAttribute("errorMessage", "verify.emailTaken");
+            case INVALID -> redirectAttributes.addFlashAttribute("errorMessage", "verify.invalid");
+            case EMAIL_CHANGED -> {
+                redirectAttributes.addFlashAttribute("successMessage", "verify.emailChanged");
+                // If the link was opened in the browser where the user is logged in, we switch their session
+                // to the new email right away, so they can continue without logging in again
+                if (authentication != null && authentication.getName().equalsIgnoreCase(result.previousEmail())) {
+                    sessionAuthenticationUpdater.refresh(result.currentEmail(), request, response);
+                    return "redirect:/profile";
+                }
+            }
         }
 
         return "redirect:/login";

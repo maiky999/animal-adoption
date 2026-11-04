@@ -28,6 +28,16 @@ public interface AdService {
      */
     Ad findById(Long id);
 
+    /**
+     * Checks whether the given person may see the listing details.
+     * Active listings are public; other statuses (pending, rejected, adopted, archived) are visible only
+     * to the author, moderators and users who already have a conversation about this listing.
+     *
+     * @param viewerEmail       email of the logged-in user, or {@code null} for an anonymous visitor
+     * @param viewerIsModerator {@code true} if the viewer has the MODERATOR or ADMIN role
+     */
+    boolean canView(Ad ad, String viewerEmail, boolean viewerIsModerator);
+
     /** Returns all listings of the given author (regardless of status). */
     List<Ad> findUserAds(String authorEmail);
 
@@ -61,7 +71,12 @@ public interface AdService {
     /** Returns the user's active listings (e.g. for the public profile). */
     List<Ad> findActiveAdsByUserId(Long userId);
 
-    /** Forwards the pre-adoption questionnaire to the listing author (asynchronously, via the queue). */
+    /**
+     * Forwards the pre-adoption questionnaire to the listing author (asynchronously, via the queue).
+     *
+     * @throws com.wsb.animaladoption.exception.LocalizedException if the author is not an organization
+     *                                                             or the listing is not active
+     */
     void processAdoptionForm(Long adId, AdoptionFormDto dto);
 
     /** Returns all listing categories sorted by id (for filters and forms). */

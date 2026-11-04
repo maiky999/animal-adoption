@@ -6,11 +6,13 @@ import com.wsb.animaladoption.service.AdService;
 import com.wsb.animaladoption.service.MessageService;
 import com.wsb.animaladoption.service.UserService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 @Controller
 @RequestMapping("/messages")
@@ -32,10 +34,22 @@ public class MessageController {
                            @PathVariable Long otherUserId,
                            @AuthenticationPrincipal UserDetails currentUser,
                            Model model) {
+        User me;
+        User otherUser;
+        Ad ad;
+        try {
+            me = userService.findByEmail(currentUser.getUsername());
+            otherUser = userService.findById(otherUserId);
+            ad = adService.findById(adId);
+        } catch (IllegalArgumentException e) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
 
-        User me = userService.findByEmail(currentUser.getUsername());
-        User otherUser = userService.findById(otherUserId);
-        Ad ad = adService.findById(adId);
+        // Without this check anyone could open /messages/{id}/{authorId} for a hidden listing
+        // (e.g. pending moderation) and see its title in the chat header
+        if (!messageService.canAccessConversation(ad, me, otherUser)) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
 
         model.addAttribute("messages", messageService.getConversationAndMarkAsRead(me.getEmail(), otherUserId, adId));
         model.addAttribute("me", me);
@@ -52,7 +66,12 @@ public class MessageController {
                               @AuthenticationPrincipal UserDetails currentUser) {
 
         if (content != null && !content.trim().isEmpty()) {
-            messageService.sendMessage(currentUser.getUsername(), otherUserId, adId, content.trim());
+            try {
+                messageService.sendMessage(currentUser.getUsername(), otherUserId, adId, content.trim());
+            } catch (IllegalArgumentException | SecurityException e) {
+                // A non-existent or forbidden conversation - 404, the same as for the chat view
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+            }
         }
         return "redirect:/messages/" + adId + "/" + otherUserId + "?t=" + System.currentTimeMillis();
     }

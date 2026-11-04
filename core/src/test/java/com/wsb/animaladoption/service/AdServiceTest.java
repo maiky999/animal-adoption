@@ -11,6 +11,9 @@ import com.wsb.animaladoption.model.Category;
 import com.wsb.animaladoption.model.User;
 import com.wsb.animaladoption.repository.AdRepository;
 import com.wsb.animaladoption.repository.CategoryRepository;
+import com.wsb.animaladoption.repository.MessageRepository;
+import com.wsb.animaladoption.enums.UserTypeEnum;
+import com.wsb.animaladoption.exception.LocalizedException;
 import com.wsb.animaladoption.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -44,6 +47,9 @@ class AdServiceTest {
 
     @Mock
     private UserRepository userRepository;
+
+    @Mock
+    private MessageRepository messageRepository;
 
     @Mock
     private FileStorageService fileStorageService;
@@ -137,6 +143,7 @@ class AdServiceTest {
     @Test
     @DisplayName("Should send a message to RabbitMQ when processing the adoption form")
     void shouldProcessAdoptionFormAndSendEvent() {
+        sampleUser.setUserType(UserTypeEnum.ORGANIZATION);
         when(adRepository.findById(10L)).thenReturn(Optional.of(sampleAd));
         when(translationService.getDefaultLocale()).thenReturn(Locale.of("pl"));
 
@@ -159,5 +166,56 @@ class AdServiceTest {
         );
         // The organization's language is unknown - the questionnaire is sent to it in the default language
         assertEquals("pl", eventCaptor.getValue().getLanguageTag());
+    }
+
+    @Test
+    @DisplayName("Should reject the adoption form when the listing author is a private person")
+    void shouldRejectAdoptionFormForPrivateAuthor() {
+        sampleUser.setUserType(UserTypeEnum.PRIVATE);
+        when(adRepository.findById(10L)).thenReturn(Optional.of(sampleAd));
+
+        LocalizedException ex = assertThrows(LocalizedException.class,
+                () -> adService.processAdoptionForm(10L, new AdoptionFormDto()));
+
+        assertEquals("adoption.form.unavailable", ex.getMessageKey());
+        verifyNoInteractions(rabbitTemplate);
+    }
+
+    @Test
+    @DisplayName("Should reject the adoption form when the listing is not active")
+    void shouldRejectAdoptionFormForInactiveAd() {
+        sampleUser.setUserType(UserTypeEnum.ORGANIZATION);
+        sampleAd.setStatus(AdStatusEnum.PENDING);
+        when(adRepository.findById(10L)).thenReturn(Optional.of(sampleAd));
+
+        assertThrows(LocalizedException.class, () -> adService.processAdoptionForm(10L, new AdoptionFormDto()));
+        verifyNoInteractions(rabbitTemplate);
+    }
+
+    @Test
+    @DisplayName("canView - an active listing is visible to everyone, including anonymous visitors")
+    void activeAdShouldBeVisibleToEveryone() {
+        assertTrue(adService.canView(sampleAd, null, false));
+    }
+
+    @Test
+    @DisplayName("canView - a pending listing is hidden from strangers, but visible to the author and moderators")
+    void pendingAdShouldBeHiddenFromStrangers() {
+        sampleAd.setStatus(AdStatusEnum.PENDING);
+        when(messageRepository.existsConversationAboutAd(10L, "obcy@example.com")).thenReturn(false);
+
+        assertFalse(adService.canView(sampleAd, null, false), "anonim");
+        assertFalse(adService.canView(sampleAd, "obcy@example.com", false), "obcy użytkownik");
+        assertTrue(adService.canView(sampleAd, "autor@example.com", false), "autor");
+        assertTrue(adService.canView(sampleAd, "moderator@example.com", true), "moderator");
+    }
+
+    @Test
+    @DisplayName("canView - a chat participant still sees a listing that is no longer active")
+    void inactiveAdShouldBeVisibleToChatParticipant() {
+        sampleAd.setStatus(AdStatusEnum.ADOPTED);
+        when(messageRepository.existsConversationAboutAd(10L, "rozmowca@example.com")).thenReturn(true);
+
+        assertTrue(adService.canView(sampleAd, "rozmowca@example.com", false));
     }
 }

@@ -1,16 +1,16 @@
 package com.wsb.animaladoption.controller;
 
+import com.wsb.animaladoption.config.SessionAuthenticationUpdater;
 import com.wsb.animaladoption.dto.UserPasswordUpdateDto;
 import com.wsb.animaladoption.exception.LocalizedException;
 import com.wsb.animaladoption.dto.UserProfileUpdateDto;
 import com.wsb.animaladoption.model.User;
 import com.wsb.animaladoption.service.UserService;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -23,6 +23,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 @RequiredArgsConstructor
 public class ProfileController {
     private final UserService userService;
+    private final SessionAuthenticationUpdater sessionAuthenticationUpdater;
 
     @GetMapping
     public String showProfile(@AuthenticationPrincipal UserDetails currentUser, Model model) {
@@ -41,6 +42,9 @@ public class ProfileController {
             model.addAttribute("passwordDto", new UserPasswordUpdateDto());
         }
 
+        // New email waiting for confirmation (shown under the email field)
+        model.addAttribute("pendingEmail", user.getPendingEmail());
+
         return "user/profile";
     }
 
@@ -56,16 +60,11 @@ public class ProfileController {
         }
 
         try {
-            String currentEmail = currentUser.getUsername();
-            userService.updateUserProfile(currentEmail, dto);
-
-            if (!currentEmail.equalsIgnoreCase(dto.getEmail())) {
-                Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-                Authentication newAuth = new UsernamePasswordAuthenticationToken(dto.getEmail(), auth.getCredentials(), auth.getAuthorities());
-                SecurityContextHolder.getContext().setAuthentication(newAuth);
-            }
-
-            redirectAttributes.addFlashAttribute("successMessage", "profile.updated");
+            // The email (login) does not change here - the user has to confirm the new address first,
+            // so the session stays valid. It is refreshed in AuthController after the link is clicked.
+            boolean emailChangePending = userService.updateUserProfile(currentUser.getUsername(), dto);
+            redirectAttributes.addFlashAttribute("successMessage",
+                    emailChangePending ? "profile.email.pending" : "profile.updated");
         } catch (LocalizedException e) {
             redirectAttributes.addFlashAttribute("errorMessage", e.getMessageKey());
             redirectAttributes.addFlashAttribute("profileDto", dto);
@@ -78,7 +77,9 @@ public class ProfileController {
     public String updatePassword(@Valid @ModelAttribute("passwordDto") UserPasswordUpdateDto dto,
                                  BindingResult result,
                                  @AuthenticationPrincipal UserDetails currentUser,
-                                 RedirectAttributes redirectAttributes) {
+                                 RedirectAttributes redirectAttributes,
+                                 HttpServletRequest request,
+                                 HttpServletResponse response) {
         if (result.hasErrors()) {
             redirectAttributes.addFlashAttribute("org.springframework.validation.BindingResult.passwordDto", result);
             redirectAttributes.addFlashAttribute("passwordDto", dto);
@@ -87,6 +88,9 @@ public class ProfileController {
 
         try {
             userService.changeUserPassword(currentUser.getUsername(), dto);
+            // The "remember me" cookie is signed with the password hash - after the change it would stop working,
+            // so we issue a new one (other devices with the old cookie are logged out, which is desired)
+            sessionAuthenticationUpdater.refresh(currentUser.getUsername(), request, response);
             redirectAttributes.addFlashAttribute("successMessage", "profile.password.changed");
         } catch (LocalizedException e) {
             redirectAttributes.addFlashAttribute("errorPasswordMessage", e.getMessageKey());

@@ -1,9 +1,8 @@
 package com.wsb.animaladoption.service;
 
 import com.wsb.animaladoption.service.impl.MessageServiceImpl;
-import com.wsb.animaladoption.config.RabbitMQConfig;
 import com.wsb.animaladoption.dto.ConversationPreviewDto;
-import com.wsb.animaladoption.event.ChatMessageEvent;
+import com.wsb.animaladoption.enums.AdStatusEnum;
 import com.wsb.animaladoption.model.Ad;
 import com.wsb.animaladoption.model.Message;
 import com.wsb.animaladoption.model.User;
@@ -17,14 +16,13 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.amqp.rabbit.core.RabbitTemplate;
 
 import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -39,52 +37,28 @@ class MessageServiceTest {
     @Mock
     private AdRepository adRepository;
 
-    @Mock
-    private RabbitTemplate rabbitTemplate;
-
     @InjectMocks
     private MessageServiceImpl messageService;
 
     @Test
-    @DisplayName("sendMessage - should publish an event to the RabbitMQ queue")
-    void shouldPublishMessageEventToRabbitMQ() {
-        // when
-        messageService.sendMessage("sender@example.com", 2L, 10L, "Dzień dobry, czy piesek jest dostępny?");
-
-        // then
-        ArgumentCaptor<ChatMessageEvent> eventCaptor = ArgumentCaptor.forClass(ChatMessageEvent.class);
-        verify(rabbitTemplate, times(1)).convertAndSend(
-                eq(RabbitMQConfig.EXCHANGE_CHAT),
-                eq(RabbitMQConfig.ROUTING_KEY_CHAT),
-                eventCaptor.capture()
-        );
-
-        ChatMessageEvent captured = eventCaptor.getValue();
-        assertThat(captured.getSenderEmail()).isEqualTo("sender@example.com");
-        assertThat(captured.getReceiverId()).isEqualTo(2L);
-        assertThat(captured.getAdId()).isEqualTo(10L);
-        assertThat(captured.getContent()).isEqualTo("Dzień dobry, czy piesek jest dostępny?");
-    }
-
-    @Test
-    @DisplayName("saveMessageToDatabase - should correctly save the message in the database")
+    @DisplayName("sendMessage - should save the message in the database immediately")
     void shouldSaveMessageToDatabase() {
         // given
-        ChatMessageEvent event = new ChatMessageEvent("sender@example.com", 2L, 10L, "Wiadomość testowa");
         User sender = User.builder().id(1L).email("sender@example.com").build();
         User receiver = User.builder().id(2L).email("receiver@example.com").build();
-        Ad ad = Ad.builder().id(10L).title("Ogłoszenie testowe").build();
+        // The recipient is the author of an active listing - a new conversation is allowed
+        Ad ad = Ad.builder().id(10L).title("Ogłoszenie testowe").author(receiver).status(AdStatusEnum.ACTIVE).build();
 
         when(userRepository.findByEmail("sender@example.com")).thenReturn(Optional.of(sender));
         when(userRepository.findById(2L)).thenReturn(Optional.of(receiver));
         when(adRepository.findById(10L)).thenReturn(Optional.of(ad));
 
         // when
-        messageService.saveMessageToDatabase(event);
+        messageService.sendMessage("sender@example.com", 2L, 10L, "Wiadomość testowa");
 
         // then
         ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
-        verify(messageRepository, times(1)).saveAndFlush(messageCaptor.capture());
+        verify(messageRepository, times(1)).save(messageCaptor.capture());
 
         Message saved = messageCaptor.getValue();
         assertThat(saved.getSender()).isEqualTo(sender);
@@ -95,19 +69,58 @@ class MessageServiceTest {
     }
 
     @Test
-    @DisplayName("saveMessageToDatabase - should throw an exception when the recipient does not exist")
+    @DisplayName("sendMessage - should throw an exception when the recipient does not exist")
     void shouldThrowExceptionWhenReceiverNotFound() {
-        ChatMessageEvent event = new ChatMessageEvent("sender@example.com", 99L, 10L, "Treść");
         User sender = User.builder().id(1L).email("sender@example.com").build();
 
         when(userRepository.findByEmail("sender@example.com")).thenReturn(Optional.of(sender));
         when(userRepository.findById(99L)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> messageService.saveMessageToDatabase(event))
+        assertThatThrownBy(() -> messageService.sendMessage("sender@example.com", 99L, 10L, "Treść"))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("Nie znaleziono odbiorcy");
 
-        verify(messageRepository, never()).saveAndFlush(any());
+        verify(messageRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("sendMessage - should reject a new conversation about a listing that is not active")
+    void shouldRejectNewConversationAboutInactiveAd() {
+        User sender = User.builder().id(1L).email("sender@example.com").build();
+        User author = User.builder().id(2L).email("author@example.com").build();
+        Ad ad = Ad.builder().id(10L).author(author).status(AdStatusEnum.PENDING).build();
+
+        when(userRepository.findByEmail("sender@example.com")).thenReturn(Optional.of(sender));
+        when(userRepository.findById(2L)).thenReturn(Optional.of(author));
+        when(adRepository.findById(10L)).thenReturn(Optional.of(ad));
+        when(messageRepository.existsConversation(10L, 1L, 2L)).thenReturn(false);
+
+        assertThatThrownBy(() -> messageService.sendMessage("sender@example.com", 2L, 10L, "Hej"))
+                .isInstanceOf(SecurityException.class);
+        verify(messageRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("canAccessConversation - an existing conversation stays available after the listing is no longer active")
+    void existingConversationShouldStayAvailable() {
+        User me = User.builder().id(1L).build();
+        User author = User.builder().id(2L).build();
+        Ad ad = Ad.builder().id(10L).author(author).status(AdStatusEnum.ADOPTED).build();
+        when(messageRepository.existsConversation(10L, 1L, 2L)).thenReturn(true);
+
+        assertThat(messageService.canAccessConversation(ad, me, author)).isTrue();
+    }
+
+    @Test
+    @DisplayName("canAccessConversation - two strangers cannot talk about someone else's listing, nor can you talk to yourself")
+    void conversationMustInvolveTheAuthor() {
+        User me = User.builder().id(1L).build();
+        User stranger = User.builder().id(3L).build();
+        User author = User.builder().id(2L).build();
+        Ad ad = Ad.builder().id(10L).author(author).status(AdStatusEnum.ACTIVE).build();
+
+        assertThat(messageService.canAccessConversation(ad, me, stranger)).isFalse();
+        assertThat(messageService.canAccessConversation(ad, author, author)).isFalse();
     }
 
     @Test
