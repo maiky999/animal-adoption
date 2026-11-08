@@ -1,5 +1,6 @@
 package com.wsb.animaladoption.dto;
 
+import com.wsb.animaladoption.validation.NotDisposableEmail;
 import com.wsb.animaladoption.enums.UserTypeEnum;
 import jakarta.validation.constraints.*;
 import lombok.Data;
@@ -11,6 +12,7 @@ import lombok.Singular;
 public class UserRegistrationDto {
     @NotBlank(message = "{validation.email.required}")
     @Email(message = "{validation.email.invalid}")
+    @NotDisposableEmail
     private String email;
 
     @NotBlank(message = "{validation.password.required}")

@@ -53,4 +53,12 @@ public interface UserService {
      * @throws IllegalArgumentException if the user does not exist
      */
     User findById(Long id);
+
+    /**
+     * Deletes accounts whose email was never confirmed and whose activation link has already expired.
+     * Such an account cannot log in, so it only takes up the email address and space in the database.
+     *
+     * @return number of deleted accounts
+     */
+    int deleteExpiredUnverifiedAccounts();
 }

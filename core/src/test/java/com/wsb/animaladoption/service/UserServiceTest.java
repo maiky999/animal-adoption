@@ -22,6 +22,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -30,6 +31,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.time.LocalDateTime;
 import java.util.Locale;
+import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -235,5 +237,20 @@ class UserServiceTest {
         );
         assertEquals("profile.error.wrongPassword", exception.getMessageKey());
         verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Should delete unconfirmed accounts with an expired activation link (token first, then the user)")
+    void shouldDeleteExpiredUnverifiedAccounts() {
+        User unverified = User.builder().id(2L).email("bot@example.com").build();
+        VerificationToken expiredToken = new VerificationToken("expired-token", unverified);
+        when(tokenRepository.findExpiredOfUnverifiedUsers(any(LocalDateTime.class))).thenReturn(List.of(expiredToken));
+
+        int deleted = userService.deleteExpiredUnverifiedAccounts();
+
+        assertEquals(1, deleted);
+        InOrder inOrder = inOrder(tokenRepository, userRepository);
+        inOrder.verify(tokenRepository).deleteAll(List.of(expiredToken));
+        inOrder.verify(userRepository).deleteAll(List.of(unverified));
     }
 }

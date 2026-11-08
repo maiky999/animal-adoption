@@ -1,14 +1,20 @@
 package com.wsb.animaladoption.config;
 
+import com.wsb.animaladoption.security.RateLimitFilter;
+import com.wsb.animaladoption.security.RateLimiter;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.authentication.AuthenticationEventPublisher;
+import org.springframework.security.authentication.DefaultAuthenticationEventPublisher;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.authentication.rememberme.TokenBasedRememberMeServices;
 
 @Configuration
@@ -19,9 +25,23 @@ public class SecurityConfig {
     @Value("${app.security.remember-me-key}")
     private String rememberMeKey;
 
+    /** Request limits (RateLimitFilter) - can be turned off e.g. for load tests. */
+    @Value("${app.security.rate-limit.enabled:true}")
+    private boolean rateLimitEnabled;
+
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
+    }
+
+    /**
+     * Publishes login events (success, wrong password, locked account...) as Spring events.
+     * LoginAttemptListener listens to them to count failed attempts. Defined explicitly,
+     * so that it is clear where the events come from.
+     */
+    @Bean
+    public AuthenticationEventPublisher authenticationEventPublisher(ApplicationEventPublisher applicationEventPublisher) {
+        return new DefaultAuthenticationEventPublisher(applicationEventPublisher);
     }
 
     /**
@@ -38,7 +58,8 @@ public class SecurityConfig {
     }
 
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http, TokenBasedRememberMeServices rememberMeServices) throws Exception {
+    public SecurityFilterChain filterChain(HttpSecurity http, TokenBasedRememberMeServices rememberMeServices,
+                                           RateLimiter rateLimiter) throws Exception {
         http
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers("/moderation/**").hasAnyRole("MODERATOR", "ADMIN")
@@ -57,6 +78,13 @@ public class SecurityConfig {
                         .key(rememberMeKey)
                         .rememberMeServices(rememberMeServices)
                 );
+
+        if (rateLimitEnabled) {
+            // Before the login filter, so that POST /login is limited too. The filter is created here with "new"
+            // (not as a @Bean/@Component), otherwise Spring Boot would also register it a second time
+            // as a regular servlet filter, outside the security chain.
+            http.addFilterBefore(new RateLimitFilter(rateLimiter), UsernamePasswordAuthenticationFilter.class);
+        }
         return http.build();
     }
 
@@ -65,7 +93,7 @@ public class SecurityConfig {
                 "/", "/ads", "/ads/**", "/register",
                 "/login", "/css/**", "/js/**", "/images/**",
                 "/error", "/uploads/**", "/verify", "/users/**",
-                "/articles", "/articles/**"
+                "/articles", "/articles/**", "/altcha/**"
         };
     }
 }

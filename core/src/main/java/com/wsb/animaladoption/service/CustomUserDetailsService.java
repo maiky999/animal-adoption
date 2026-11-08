@@ -15,6 +15,7 @@ import java.util.Collections;
 @RequiredArgsConstructor
 public class CustomUserDetailsService implements UserDetailsService {
     private final UserRepository userRepository;
+    private final LoginAttemptService loginAttemptService;
 
     public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
         String normalizedEmail = email.trim().toLowerCase();
@@ -27,7 +28,9 @@ public class CustomUserDetailsService implements UserDetailsService {
                 user.isEmailVerified(),
                 true,
                 true,
-                true,
+                // A locked account is rejected by Spring Security BEFORE the password is checked (LockedException),
+                // so during the lock even the correct password does not help - guessing makes no sense
+                !loginAttemptService.isBlocked(normalizedEmail),
                 Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + user.getRole().name()))
         );
     }

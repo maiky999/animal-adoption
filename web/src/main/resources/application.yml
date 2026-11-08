@@ -24,10 +24,18 @@ spring:
     defer-datasource-initialization: true
     hibernate:
       ddl-auto: update
-    show-sql: true
+    # SQL logging only for debugging (SHOW_SQL=true) - on production it slows the application down and fills the logs
+    show-sql: ${SHOW_SQL:false}
     properties:
       hibernate:
         dialect: org.hibernate.dialect.SQLServerDialect
+
+  # Upload limits - a single photo up to 10 MB, the whole form (a listing with several photos) up to 30 MB.
+  # Without them anyone could tie up the server by sending huge requests.
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 30MB
 
   rabbitmq:
     host: ${RABBITMQ_HOST:localhost}
@@ -38,7 +46,12 @@ spring:
 server:
   port: ${SERVER_PORT:8080}
   tomcat:
-    max-http-request-size: 50MB
+    # Upper bound for any request body, consistent with spring.servlet.multipart.max-request-size
+    max-http-request-size: 30MB
+  # Behind a reverse proxy (nginx, Cloudflare) set FORWARD_HEADERS_STRATEGY=native, so that the real client IP
+  # is read from the X-Forwarded-For header (needed by the request limits in RateLimitFilter).
+  # Without a proxy it must stay "none" - otherwise anyone could fake their IP by sending that header themselves.
+  forward-headers-strategy: ${FORWARD_HEADERS_STRATEGY:none}
 
 # Our own application configuration
 app:
@@ -49,3 +62,6 @@ app:
     remember-me-key: ${REMEMBER_ME_KEY}
     # Key for encrypting sensitive data in the database (any length - a 256-bit AES key is derived from it with SHA-256)
     crypto-key: ${CRYPTO_KEY}
+    # Limits on the number of requests to sensitive endpoints (see RateLimitFilter)
+    rate-limit:
+      enabled: ${RATE_LIMIT_ENABLED:true}

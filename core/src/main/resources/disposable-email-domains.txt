@@ -1,0 +1,48 @@
+# Disposable ("temporary") mailbox services - registration with these domains is rejected
+# (see NotDisposableEmail). One domain per line; subdomains are matched automatically.
+# The list contains the most popular services. A full, regularly updated list is maintained at
+# https://github.com/disposable-email-domains/disposable-email-domains
+10minutemail.com
+10minutemail.net
+20minutemail.com
+33mail.com
+dispostable.com
+discard.email
+emailondeck.com
+fakeinbox.com
+getairmail.com
+getnada.com
+guerrillamail.biz
+guerrillamail.com
+guerrillamail.de
+guerrillamail.info
+guerrillamail.net
+guerrillamail.org
+guerrillamailblock.com
+harakirimail.com
+inboxkitten.com
+mailcatch.com
+maildrop.cc
+mailinator.com
+mailinator.net
+mailnesia.com
+mintemail.com
+mohmal.com
+mytemp.email
+nada.email
+sharklasers.com
+spam4.me
+spamgourmet.com
+temp-mail.io
+temp-mail.org
+tempail.com
+tempmail.com
+tempmail.net
+tempmailo.com
+tempr.email
+throwawaymail.com
+trashmail.com
+trashmail.de
+yopmail.com
+yopmail.fr
+yopmail.net

@@ -1,5 +1,6 @@
 package com.wsb.animaladoption.dto;
 
+import com.wsb.animaladoption.validation.NotDisposableEmail;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
@@ -11,6 +12,7 @@ import org.springframework.web.multipart.MultipartFile;
 public class UserProfileUpdateDto {
     @NotBlank(message = "{validation.email.required}")
     @Email(message = "{validation.email.invalid}")
+    @NotDisposableEmail
     private String email;
 
     @NotBlank(message = "{validation.displayName.required}")

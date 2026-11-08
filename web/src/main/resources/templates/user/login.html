@@ -38,7 +38,7 @@
     </div>
 
     <!-- Standard login error (wrong password / no such user) -->
-    <div th:if="${param.error} and (${session['SPRING_SECURITY_LAST_EXCEPTION']} == null or !${#strings.contains(session['SPRING_SECURITY_LAST_EXCEPTION'].toString(), 'DisabledException')})"
+    <div th:if="${param.error} and (${session['SPRING_SECURITY_LAST_EXCEPTION']} == null or !(${#strings.contains(session['SPRING_SECURITY_LAST_EXCEPTION'].toString(), 'DisabledException')} or ${#strings.contains(session['SPRING_SECURITY_LAST_EXCEPTION'].toString(), 'LockedException')}))"
          class="bg-red-50 text-red-600 p-4 rounded-xl text-sm mb-6 border border-red-100 flex items-center shadow-sm fade-in">
       <i class="ph ph-warning-circle text-2xl mr-2"></i>
       <span>[[#{login.error.badCredentials}]]</span>
@@ -51,6 +51,16 @@
       <div>
         <strong>[[#{login.error.disabled.title}]]</strong><br>
         <span>[[#{login.error.disabled.text}]]</span>
+      </div>
+    </div>
+
+    <!-- Account temporarily locked after too many wrong passwords (LoginAttemptService) -->
+    <div th:if="${param.error} and ${session['SPRING_SECURITY_LAST_EXCEPTION']} != null and ${#strings.contains(session['SPRING_SECURITY_LAST_EXCEPTION'].toString(), 'LockedException')}"
+         class="bg-red-50 text-red-600 p-4 rounded-xl text-sm mb-6 border border-red-100 flex items-start shadow-sm fade-in">
+      <i class="ph-fill ph-lock-key text-2xl mr-2 mt-0.5"></i>
+      <div>
+        <strong>[[#{login.error.locked.title}]]</strong><br>
+        <span>[[#{login.error.locked.text}]]</span>
       </div>
     </div>
 

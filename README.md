@@ -45,7 +45,8 @@ Wymagania: JDK 21, Docker (do bazy danych i RabbitMQ).
    ```
 
    Uruchamia SQL Server (port 1433, baza tworzona automatycznie) i RabbitMQ
-   (port 5672, panel administracyjny: http://localhost:15672).
+   (port 5672, panel administracyjny: http://localhost:15672). Porty są dostępne tylko z tego
+   komputera (`127.0.0.1`), nie z sieci.
 
 3. **Aplikacja:**
    - w IntelliJ IDEA – konfiguracja uruchomieniowa **„Łapka - aplikacja”** (wymaga wtyczki *EnvFile*,
@@ -81,3 +82,22 @@ Testy korzystają z bazy H2 w pamięci i nie wymagają uruchomionego SQL Servera
   obowiązuje dotychczasowy adres,
 - przesyłane pliki muszą być obrazami (JPG, PNG, GIF, WEBP) i są zapisywane pod losową nazwą,
 - e-maile (weryfikacja konta, ankiety) są wysyłane asynchronicznie przez kolejkę RabbitMQ.
+
+### Ochrona przed botami i nadużyciami
+
+- **limity żądań** (`web/.../security/RateLimitFilter.java`): rejestracja 5/h na IP, logowanie 10/min na IP,
+  wiadomości 20/min, nowe ogłoszenia i ankiety 10/h, zmiany profilu 10/10 min na konto; po przekroczeniu
+  odpowiedź HTTP 429. Można wyłączyć zmienną `RATE_LIMIT_ENABLED=false` (np. do testów obciążeniowych),
+- **honeypot i minimalny czas wypełnienia** formularza rejestracji (`RegistrationBotGuard`),
+- **ALTCHA** – CAPTCHA typu *proof of work* na rejestracji, obsługiwana w całości przez naszą aplikację
+  (`AltchaService`, bez zewnętrznych usług i ciasteczek). Widget wymaga bezpiecznego kontekstu
+  przeglądarki – działa na `localhost` i przez HTTPS, ale nie przez zwykłe HTTP pod adresem IP w sieci,
+- **blokada logowania** na 15 minut po 5 błędnych hasłach do tego samego konta (`LoginAttemptService`),
+- **odrzucanie jednorazowych skrzynek e-mail** (`core/src/main/resources/disposable-email-domains.txt`),
+- **usuwanie niepotwierdzonych kont** po wygaśnięciu linku aktywacyjnego – co godzinę (`UnverifiedAccountCleanupJob`),
+- **limity uploadu**: 10 MB na plik, 30 MB na całe żądanie.
+
+Liczniki są trzymane w pamięci aplikacji, więc działają dla jednej instancji. Za reverse proxy
+(nginx, Cloudflare) trzeba ustawić `FORWARD_HEADERS_STRATEGY=native`, żeby limity widziały prawdziwe IP
+klienta. Ochrona przed DDoS wolumetrycznym (zalewanie ruchem z wielu maszyn) musi działać przed aplikacją,
+np. Cloudflare albo `limit_req` w nginx.

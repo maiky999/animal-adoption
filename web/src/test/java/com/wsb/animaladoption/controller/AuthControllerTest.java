@@ -5,6 +5,8 @@ import com.wsb.animaladoption.dto.UserRegistrationDto;
 import com.wsb.animaladoption.dto.VerificationResult;
 import com.wsb.animaladoption.enums.UserTypeEnum;
 import com.wsb.animaladoption.enums.VerificationResultEnum;
+import com.wsb.animaladoption.security.AltchaService;
+import com.wsb.animaladoption.security.RegistrationBotGuard;
 import com.wsb.animaladoption.service.UserService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -12,11 +14,16 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
+import java.time.Instant;
+
+import static org.hamcrest.Matchers.notNullValue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -32,6 +39,13 @@ class AuthControllerTest {
     @Mock
     private SessionAuthenticationUpdater sessionAuthenticationUpdater;
 
+    @Mock
+    private AltchaService altchaService;
+
+    /** The real guard (not a mock) - the tests control it through the session attribute and the honeypot field. */
+    @Spy
+    private RegistrationBotGuard botGuard = new RegistrationBotGuard();
+
     @InjectMocks
     private AuthController authController;
 
@@ -40,6 +54,30 @@ class AuthControllerTest {
     @BeforeEach
     void setUp() {
         mockMvc = MockMvcBuilders.standaloneSetup(authController).build();
+        // By default the CAPTCHA is solved correctly - individual tests change this when needed
+        lenient().when(altchaService.verify(any())).thenReturn(true);
+    }
+
+    /**
+     * POST /register as sent by a human: the form was displayed 10 seconds earlier (time in the session),
+     * the honeypot field is empty and the ALTCHA solution is attached.
+     */
+    private MockHttpServletRequestBuilder humanRegistration(String email, String password, String displayName,
+                                                            String mobile, String userType) {
+        return post("/register")
+                .sessionAttr(RegistrationBotGuard.FORM_SHOWN_AT, Instant.now().minusSeconds(10))
+                .param("email", email)
+                .param("password", password)
+                .param("displayName", displayName)
+                .param("mobile", mobile)
+                .param("userType", userType)
+                .param("homepage", "")
+                .param("altcha", "solved-payload");
+    }
+
+    private MockHttpServletRequestBuilder validHumanRegistration() {
+        return humanRegistration("jan@example.com", "bezpieczneHaslo123", "Jan Kowalski", "123456789",
+                UserTypeEnum.PRIVATE.name());
     }
 
     @Test
@@ -56,7 +94,9 @@ class AuthControllerTest {
         mockMvc.perform(get("/register"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("user/register"))
-                .andExpect(model().attributeExists("userRegistrationDto"));
+                .andExpect(model().attributeExists("userRegistrationDto"))
+                // The display time is saved, so that the fill-in time can be checked on submit
+                .andExpect(request().sessionAttribute(RegistrationBotGuard.FORM_SHOWN_AT, notNullValue()));
     }
 
     @Test
@@ -89,12 +129,8 @@ class AuthControllerTest {
     @Test
     @DisplayName("POST /register - should register the user and redirect to /login?success")
     void shouldRegisterUserSuccessfully() throws Exception {
-        mockMvc.perform(post("/register")
-                        .param("email", "jan.kowalski@example.com")
-                        .param("password", "bezpieczneHaslo123")
-                        .param("displayName", "Jan Kowalski")
-                        .param("mobile", "123456789")
-                        .param("userType", UserTypeEnum.PRIVATE.name()))
+        mockMvc.perform(humanRegistration("jan.kowalski@example.com", "bezpieczneHaslo123", "Jan Kowalski",
+                        "123456789", UserTypeEnum.PRIVATE.name()))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/login?success"));
 
@@ -109,12 +145,7 @@ class AuthControllerTest {
     @Test
     @DisplayName("POST /register - should return the form when the data fails validation")
     void shouldReturnRegisterViewWhenValidationFails() throws Exception {
-        mockMvc.perform(post("/register")
-                        .param("email", "niepoprawny-email")
-                        .param("password", "short")
-                        .param("displayName", "")
-                        .param("mobile", "123")
-                        .param("userType", ""))
+        mockMvc.perform(humanRegistration("niepoprawny-email", "short", "", "123", ""))
                 .andExpect(status().isOk())
                 .andExpect(view().name("user/register"))
                 .andExpect(model().attributeHasFieldErrors("userRegistrationDto",
@@ -129,12 +160,7 @@ class AuthControllerTest {
         doThrow(new IllegalArgumentException("Użytkownik o podanym adresie email już istnieje."))
                 .when(userService).registerNewUser(any(UserRegistrationDto.class));
 
-        mockMvc.perform(post("/register")
-                        .param("email", "jan@example.com")
-                        .param("password", "bezpieczneHaslo123")
-                        .param("displayName", "Jan Kowalski")
-                        .param("mobile", "123456789")
-                        .param("userType", UserTypeEnum.PRIVATE.name()))
+        mockMvc.perform(validHumanRegistration())
                 .andExpect(status().isOk())
                 .andExpect(view().name("user/register"))
                 .andExpect(model().attributeHasFieldErrors("userRegistrationDto", "email"));
@@ -148,16 +174,75 @@ class AuthControllerTest {
         doThrow(new DataIntegrityViolationException("Duplicate key"))
                 .when(userService).registerNewUser(any(UserRegistrationDto.class));
 
-        mockMvc.perform(post("/register")
-                        .param("email", "jan@example.com")
-                        .param("password", "bezpieczneHaslo123")
-                        .param("displayName", "Jan Kowalski")
-                        .param("mobile", "123456789")
-                        .param("userType", UserTypeEnum.PRIVATE.name()))
+        mockMvc.perform(validHumanRegistration())
                 .andExpect(status().isOk())
                 .andExpect(view().name("user/register"))
                 .andExpect(model().attributeHasFieldErrors("userRegistrationDto", "email"));
 
         verify(userService, times(1)).registerNewUser(any(UserRegistrationDto.class));
+    }
+
+    @Test
+    @DisplayName("POST /register - should reject a disposable email address")
+    void shouldRejectDisposableEmail() throws Exception {
+        mockMvc.perform(humanRegistration("bot@mailinator.com", "bezpieczneHaslo123", "Bot", "123456789",
+                        UserTypeEnum.PRIVATE.name()))
+                .andExpect(status().isOk())
+                .andExpect(view().name("user/register"))
+                .andExpect(model().attributeHasFieldErrors("userRegistrationDto", "email"));
+
+        verify(userService, never()).registerNewUser(any(UserRegistrationDto.class));
+    }
+
+    @Test
+    @DisplayName("POST /register - a filled-in honeypot field should pretend success without creating an account")
+    void shouldSilentlyIgnoreBotThatFilledHoneypot() throws Exception {
+        mockMvc.perform(validHumanRegistration().param("homepage", "http://spam.example"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/login?success"));
+
+        verify(userService, never()).registerNewUser(any(UserRegistrationDto.class));
+    }
+
+    @Test
+    @DisplayName("POST /register - a form sent without displaying it first (no time in the session) should be rejected")
+    void shouldRejectFormSentWithoutDisplayingIt() throws Exception {
+        mockMvc.perform(post("/register")
+                        .param("email", "jan@example.com")
+                        .param("password", "bezpieczneHaslo123")
+                        .param("displayName", "Jan Kowalski")
+                        .param("mobile", "123456789")
+                        .param("userType", UserTypeEnum.PRIVATE.name())
+                        .param("altcha", "solved-payload"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("user/register"))
+                .andExpect(model().attributeHasErrors("userRegistrationDto"));
+
+        verify(userService, never()).registerNewUser(any(UserRegistrationDto.class));
+    }
+
+    @Test
+    @DisplayName("POST /register - a form sent right after displaying it should be rejected")
+    void shouldRejectFormSentTooFast() throws Exception {
+        mockMvc.perform(validHumanRegistration()
+                        .sessionAttr(RegistrationBotGuard.FORM_SHOWN_AT, Instant.now()))
+                .andExpect(status().isOk())
+                .andExpect(view().name("user/register"))
+                .andExpect(model().attributeHasErrors("userRegistrationDto"));
+
+        verify(userService, never()).registerNewUser(any(UserRegistrationDto.class));
+    }
+
+    @Test
+    @DisplayName("POST /register - should reject the form when the ALTCHA solution is wrong or missing")
+    void shouldRejectFormWithoutValidCaptcha() throws Exception {
+        when(altchaService.verify(any())).thenReturn(false);
+
+        mockMvc.perform(validHumanRegistration())
+                .andExpect(status().isOk())
+                .andExpect(view().name("user/register"))
+                .andExpect(model().attributeHasErrors("userRegistrationDto"));
+
+        verify(userService, never()).registerNewUser(any(UserRegistrationDto.class));
     }
 }

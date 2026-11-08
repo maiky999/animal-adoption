@@ -24,6 +24,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -177,5 +178,17 @@ public class UserServiceImpl implements UserService {
     public User findById(Long id) {
         return userRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Nie znaleziono użytkownika"));
+    }
+
+    @Override
+    @Transactional
+    public int deleteExpiredUnverifiedAccounts() {
+        List<VerificationToken> expiredTokens = tokenRepository.findExpiredOfUnverifiedUsers(LocalDateTime.now());
+        // An unconfirmed account cannot log in, so it has no listings, messages or avatar - only the token and the user.
+        // The token is deleted first, because it references the user (foreign key).
+        List<User> users = expiredTokens.stream().map(VerificationToken::getUser).toList();
+        tokenRepository.deleteAll(expiredTokens);
+        userRepository.deleteAll(users);
+        return users.size();
     }
 }
