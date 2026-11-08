@@ -110,6 +110,32 @@
             <span th:text="${ad.location}">Lokalizacja</span>
           </p>
 
+          <!-- Information about the animal (only what the author filled in) -->
+          <div th:if="${ad.hasAnimalDetails()}" class="mb-6">
+            <h3 class="text-sm font-bold text-gray-400 uppercase tracking-wider mb-2">[[#{ads.modal.animal}]]</h3>
+            <dl class="grid grid-cols-3 gap-2 mb-3" th:if="${ad.age != null or ad.sex != null or ad.size != null}">
+              <div th:if="${ad.age != null}" class="bg-gray-50 rounded-xl p-2 text-center">
+                <dt class="text-[10px] text-gray-400 uppercase font-bold">[[#{animal.age}]]</dt>
+                <dd class="text-sm font-bold text-gray-700" th:text="#{${'animal.age.' + ad.age}}">Dorosły</dd>
+              </div>
+              <div th:if="${ad.sex != null}" class="bg-gray-50 rounded-xl p-2 text-center">
+                <dt class="text-[10px] text-gray-400 uppercase font-bold">[[#{animal.sex}]]</dt>
+                <dd class="text-sm font-bold text-gray-700" th:text="#{${'animal.sex.' + ad.sex}}">Samiec</dd>
+              </div>
+              <div th:if="${ad.size != null}" class="bg-gray-50 rounded-xl p-2 text-center">
+                <dt class="text-[10px] text-gray-400 uppercase font-bold">[[#{animal.size}]]</dt>
+                <dd class="text-sm font-bold text-gray-700" th:text="#{${'animal.size.' + ad.size}}">Średni</dd>
+              </div>
+            </dl>
+            <ul class="flex flex-wrap gap-2" th:if="${ad.hasAnyFeature()}">
+              <li th:if="${ad.vaccinated == true}" class="text-xs bg-green-50 text-green-700 border border-green-200 px-2 py-1 rounded-full font-bold"><i class="ph-bold ph-check"></i> [[#{animal.feature.vaccinated}]]</li>
+              <li th:if="${ad.sterilized == true}" class="text-xs bg-green-50 text-green-700 border border-green-200 px-2 py-1 rounded-full font-bold"><i class="ph-bold ph-check"></i> [[#{animal.feature.sterilized}]]</li>
+              <li th:if="${ad.chipped == true}" class="text-xs bg-green-50 text-green-700 border border-green-200 px-2 py-1 rounded-full font-bold"><i class="ph-bold ph-check"></i> [[#{animal.feature.chipped}]]</li>
+              <li th:if="${ad.goodWithKids == true}" class="text-xs bg-green-50 text-green-700 border border-green-200 px-2 py-1 rounded-full font-bold"><i class="ph-bold ph-check"></i> [[#{animal.feature.goodWithKids}]]</li>
+              <li th:if="${ad.goodWithAnimals == true}" class="text-xs bg-green-50 text-green-700 border border-green-200 px-2 py-1 rounded-full font-bold"><i class="ph-bold ph-check"></i> [[#{animal.feature.goodWithAnimals}]]</li>
+            </ul>
+          </div>
+
           <h3 class="text-sm font-bold text-gray-400 uppercase tracking-wider mb-2">[[#{ads.modal.description}]]</h3>
           <div class="prose text-gray-700 leading-relaxed whitespace-pre-wrap" th:text="${ad.description}">
             Opis...

@@ -1,10 +1,12 @@
 package com.wsb.animaladoption.service;
 
 import com.wsb.animaladoption.dto.AdCreateDto;
+import com.wsb.animaladoption.dto.AdSearchCriteria;
 import com.wsb.animaladoption.dto.AdoptionFormDto;
 import com.wsb.animaladoption.enums.AdStatusEnum;
 import com.wsb.animaladoption.model.Ad;
 import com.wsb.animaladoption.model.Category;
+import org.springframework.data.domain.Page;
 
 import java.util.List;
 
@@ -20,6 +22,16 @@ public interface AdService {
      * @param categoryId category id, or {@code null} to fetch all categories
      */
     List<Ad> findActiveAds(Long categoryId);
+
+    /** Number of listings on one page of the listings board. */
+    int PAGE_SIZE = 12;
+
+    /**
+     * Searches active listings with the filters from the listings board, one page at a time.
+     *
+     * @param page page number counted from 0 (a negative number is treated as 0)
+     */
+    Page<Ad> searchActiveAds(AdSearchCriteria criteria, int page);
 
     /**
      * Returns the listing with the given id.
@@ -45,18 +57,22 @@ public interface AdService {
     List<Ad> findPendingAds();
 
     /**
-     * Changes the listing status by its author (e.g. marking it as adopted).
+     * Changes the listing status by its author. The author can only close a listing ({@code ARCHIVED})
+     * or mark a published one as adopted ({@code ADOPTED}) - publishing is reserved for moderators.
      *
-     * @throws SecurityException if the user is not the author of the listing
+     * @throws SecurityException        if the user is not the author of the listing
+     * @throws IllegalArgumentException if the author may not set this status
      */
     void changeAdStatus(Long adId, AdStatusEnum newStatus, String authorEmail);
 
+    /** Moderation: publishes the listing. */
+    void approveAd(Long adId);
+
     /**
-     * Approves or rejects a listing as part of moderation.
-     *
-     * @param approve {@code true} - the listing becomes active, {@code false} - it is rejected
+     * Moderation: rejects the listing and emails the author the reason, so they know what to correct.
+     * The author can then edit the listing, which sends it back to moderation.
      */
-    void moderateAd(Long adId, boolean approve);
+    void rejectAd(Long adId, String reason);
 
     /** Creates a new listing with a status awaiting moderation. */
     Ad createAd(AdCreateDto dto, String authorEmail);

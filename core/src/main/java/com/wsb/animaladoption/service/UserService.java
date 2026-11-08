@@ -55,6 +55,28 @@ public interface UserService {
     User findById(Long id);
 
     /**
+     * Sends a link for setting a new password ("Forgot password?").
+     * <p>
+     * The method behaves the same whether the account exists or not (no exception, no return value),
+     * so the form cannot be used to check which email addresses are registered.
+     * The link is sent only to confirmed accounts, and not more often than every few minutes.
+     */
+    void requestPasswordReset(String email);
+
+    /** Checks whether the link from the email is still valid (to show the form or an error right away). */
+    boolean isPasswordResetTokenValid(String token);
+
+    /**
+     * Sets a new password using the link from the email. The link works only once.
+     *
+     * @return {@code false} if the link is invalid, already used or expired
+     */
+    boolean resetPassword(String token, String newPassword);
+
+    /** Deletes unused password reset links that have already expired. */
+    int deleteExpiredPasswordResetTokens();
+
+    /**
      * Deletes accounts whose email was never confirmed and whose activation link has already expired.
      * Such an account cannot log in, so it only takes up the email address and space in the database.
      *

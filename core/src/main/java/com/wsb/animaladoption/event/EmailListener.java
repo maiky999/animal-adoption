@@ -93,6 +93,44 @@ public class EmailListener {
         }
     }
 
+    @RabbitListener(queues = RabbitMQConfig.QUEUE_PASSWORD_RESET)
+    public void handlePasswordResetEmail(PasswordResetEvent event) {
+        log.info("Rozpoczynam wysyłkę linku do ustawienia nowego hasła do: {}", event.getEmail());
+        try {
+            Locale locale = resolveLocale(event.getLanguageTag());
+            String resetLink = baseUrl + "/reset-password?token=" + event.getResetToken();
+
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setTo(event.getEmail());
+            message.setSubject(translationService.get(locale, "email.passwordReset.subject"));
+            message.setText(translationService.get(locale, "email.passwordReset.body", resetLink));
+
+            mailSender.send(message);
+            log.info("Wysłano link do ustawienia nowego hasła do: {}", event.getEmail());
+        } catch (Exception e) {
+            log.error("Błąd podczas wysyłania linku do ustawienia nowego hasła do: {}", event.getEmail(), e);
+        }
+    }
+
+    @RabbitListener(queues = RabbitMQConfig.QUEUE_AD_REJECTED)
+    public void handleAdRejectedEmail(AdRejectedEvent event) {
+        log.info("Rozpoczynam wysyłkę informacji o odrzuceniu ogłoszenia do: {}", event.getAuthorEmail());
+        try {
+            Locale locale = resolveLocale(event.getLanguageTag());
+
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setTo(event.getAuthorEmail());
+            message.setSubject(translationService.get(locale, "email.adRejected.subject", event.getAdTitle()));
+            message.setText(translationService.get(locale, "email.adRejected.body",
+                    event.getAuthorName(), event.getAdTitle(), event.getReason(), baseUrl + "/my-ads"));
+
+            mailSender.send(message);
+            log.info("Wysłano informację o odrzuceniu ogłoszenia do: {}", event.getAuthorEmail());
+        } catch (Exception e) {
+            log.error("Błąd podczas wysyłania informacji o odrzuceniu ogłoszenia do: {}", event.getAuthorEmail(), e);
+        }
+    }
+
     /** Converts the event's language tag to a Locale; events without a language (e.g. old ones from the queue) get the default language. */
     private Locale resolveLocale(String languageTag) {
         return languageTag == null || languageTag.isBlank()

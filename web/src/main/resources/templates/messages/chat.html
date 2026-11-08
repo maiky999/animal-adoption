@@ -31,26 +31,18 @@
     <!-- Messages area -->
     <div id="chat-container" class="bg-gray-50 flex-grow border-l border-r border-gray-100 p-4 overflow-y-auto flex flex-col space-y-4">
 
-        <div th:if="${#lists.isEmpty(messages)}" class="m-auto text-center text-gray-400 text-sm bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
+        <div id="chat-empty" th:if="${#lists.isEmpty(messages)}" class="m-auto text-center text-gray-400 text-sm bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
             [[#{chat.start.line1}]]<br>[[#{chat.start.line2}]]
         </div>
 
-        <!-- Single message -->
-        <div th:each="msg : ${messages}" class="flex w-full" th:classappend="${msg.sender.id == me.id} ? 'justify-end' : 'justify-start'">
-
-            <div class="max-w-[75%] md:max-w-[60%] flex flex-col">
-                <div class="p-3 rounded-2xl shadow-sm relative"
-                     th:classappend="${msg.sender.id == me.id} ? 'bg-primary text-white rounded-tr-sm' : 'bg-white text-gray-800 border border-gray-100 rounded-tl-sm'">
-                    <p class="text-sm whitespace-pre-wrap leading-relaxed" th:text="${msg.content}">Treść wiadomości...</p>
-                </div>
-                <!-- Date and time -->
-                <span class="text-[10px] text-gray-400 mt-1 px-1"
-                      th:classappend="${msg.sender.id == me.id} ? 'text-right' : 'text-left'"
-                      th:text="${#temporals.format(msg.sentAt, 'dd.MM.yyyy HH:mm')}">14:30</span>
-            </div>
-
-        </div>
+        <!-- Messages (the bubble fragment is shared with the automatic refresh) -->
+        <th:block th:each="msg : ${messages}">
+            <div th:replace="~{messages/fragments/chat-messages :: bubble(${msg})}"></div>
+        </th:block>
     </div>
+
+    <!-- Automatic refresh: new messages are appended to #chat-container without reloading the page -->
+    <div th:replace="~{messages/fragments/chat-messages :: poller}"></div>
 
     <!-- Send form (at the bottom) -->
     <div class="bg-white rounded-b-2xl shadow-sm border border-gray-100 p-3">
@@ -65,13 +57,31 @@
         </form>
     </div>
 
-    <!-- Script that scrolls the chat to the bottom on open -->
+    <!-- Scrolling: to the bottom on open, and after new messages arrive - but only if the user was already
+         at the bottom, so reading older messages is not interrupted by a jump -->
     <script>
-            window.addEventListener('DOMContentLoaded', (event) => {
+            window.addEventListener('DOMContentLoaded', () => {
                 const container = document.getElementById('chat-container');
-                if(container) {
-                    container.scrollTop = container.scrollHeight;
+                if (!container) {
+                    return;
                 }
+                container.scrollTop = container.scrollHeight;
+
+                let stickToBottom = true;
+                container.addEventListener('scroll', () => {
+                    stickToBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 80;
+                });
+
+                // MutationObserver reports every change of the container's children, i.e. messages added by HTMX
+                new MutationObserver(() => {
+                    const placeholder = document.getElementById('chat-empty');
+                    if (placeholder) {
+                        placeholder.remove();
+                    }
+                    if (stickToBottom) {
+                        container.scrollTop = container.scrollHeight;
+                    }
+                }).observe(container, { childList: true });
             });
         </script>
 </main>

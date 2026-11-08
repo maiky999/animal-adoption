@@ -51,6 +51,9 @@ public class RateLimitFilter extends OncePerRequestFilter {
             new Rule("register", "POST", "/register", 5, Duration.ofHours(1)),
             // Login: guessing passwords (independently, LoginAttemptService locks a single account)
             new Rule("login", "POST", "/login", 10, Duration.ofMinutes(1)),
+            // "Forgot password?": each request may send an email; the token is 256-bit, so guessing it is hopeless anyway
+            new Rule("forgot-password", "POST", "/forgot-password", 5, Duration.ofHours(1)),
+            new Rule("reset-password", "POST", "/reset-password", 10, Duration.ofHours(1)),
             // New ALTCHA challenges - every page view fetches one, so the limit is loose
             new Rule("altcha", "GET", "/altcha/challenge", 30, Duration.ofMinutes(1)),
             // Chat messages

@@ -34,6 +34,12 @@ public interface MessageService {
     /** Returns the conversation between two users about a listing and marks received messages as read. */
     List<Message> getConversationAndMarkAsRead(String currentUserEmail, Long otherUserId, Long adId);
 
+    /**
+     * Returns only the messages newer than {@code afterMessageId} and marks the received ones as read
+     * (the user has the chat open, so they see them right away). Used by the automatic chat refresh.
+     */
+    List<Message> getNewMessagesAndMarkAsRead(String currentUserEmail, Long otherUserId, Long adId, Long afterMessageId);
+
     /** Returns the user's conversations (last message and number of unread messages). */
     List<ConversationPreviewDto> getUserConversations(String email);
 

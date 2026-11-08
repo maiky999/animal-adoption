@@ -48,6 +48,11 @@ server:
   tomcat:
     # Upper bound for any request body, consistent with spring.servlet.multipart.max-request-size
     max-http-request-size: 30MB
+    # Maximum number of parts in a multipart/form-data request. EVERY form field is a part (not only files) -
+    # the listing form has ~20 of them (animal information, checkboxes with hidden "_field" markers) plus one
+    # per photo. Tomcat's default of 10 rejected the form with FileCountLimitExceededException.
+    # The limit still exists, so nobody can send a request with thousands of tiny parts.
+    max-part-count: 50
   # Behind a reverse proxy (nginx, Cloudflare) set FORWARD_HEADERS_STRATEGY=native, so that the real client IP
   # is read from the X-Forwarded-For header (needed by the request limits in RateLimitFilter).
   # Without a proxy it must stay "none" - otherwise anyone could fake their IP by sending that header themselves.

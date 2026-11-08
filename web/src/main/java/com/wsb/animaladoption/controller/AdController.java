@@ -1,12 +1,18 @@
 package com.wsb.animaladoption.controller;
 
 import com.wsb.animaladoption.dto.AdCreateDto;
+import com.wsb.animaladoption.dto.AdSearchCriteria;
 import com.wsb.animaladoption.dto.AdoptionFormDto;
+import com.wsb.animaladoption.enums.AnimalAgeEnum;
+import com.wsb.animaladoption.enums.AnimalSexEnum;
+import com.wsb.animaladoption.enums.AnimalSizeEnum;
 import com.wsb.animaladoption.exception.LocalizedException;
 import com.wsb.animaladoption.model.Ad;
 import com.wsb.animaladoption.service.AdService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -17,8 +23,7 @@ import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
-
-import java.util.List;
+import org.springframework.web.util.UriComponentsBuilder;
 
 @Controller
 @RequestMapping("/ads")
@@ -26,12 +31,45 @@ import java.util.List;
 public class AdController {
     private final AdService adService;
 
+    /** Options of the animal selects - added to every view of this controller (board filters and the listing form). */
+    @ModelAttribute
+    public void addAnimalOptions(Model model) {
+        model.addAttribute("ageOptions", AnimalAgeEnum.values());
+        model.addAttribute("sexOptions", AnimalSexEnum.values());
+        model.addAttribute("sizeOptions", AnimalSizeEnum.values());
+    }
+
+    /**
+     * Listings board with filters and pagination. The filters come from URL parameters, so the browser's
+     * "back" button, bookmarks and shared links keep the search. The filter form sends the request through HTMX
+     * and swaps only the results (see ads/list.html) - without HTMX it still works as a regular form.
+     */
     @GetMapping
-    public String getAdsPage(@RequestParam(required = false) Long categoryId, Model model) {
-        List<Ad> ads = adService.findActiveAds(categoryId);
-        model.addAttribute("ads", ads);
+    public String getAdsPage(@ModelAttribute("criteria") AdSearchCriteria criteria,
+                             @RequestParam(defaultValue = "0") int page,
+                             HttpServletRequest request,
+                             Model model) {
+        Page<Ad> result = adService.searchActiveAds(criteria, page);
+
+        model.addAttribute("ads", result.getContent());
+        model.addAttribute("adsPage", result);
         model.addAttribute("categories", adService.findAllCategories());
+        if (result.hasPrevious()) {
+            model.addAttribute("previousPageUrl", pageUrl(request, result.getNumber() - 1));
+        }
+        if (result.hasNext()) {
+            model.addAttribute("nextPageUrl", pageUrl(request, result.getNumber() + 1));
+        }
         return "ads/list";
+    }
+
+    /** The current URL with all filters kept and only the page number changed. */
+    private static String pageUrl(HttpServletRequest request, int page) {
+        return UriComponentsBuilder.fromPath(request.getRequestURI())
+                .query(request.getQueryString())
+                .replaceQueryParam("page", page)
+                .build()
+                .toUriString();
     }
 
     @GetMapping("/{id}")
@@ -93,13 +131,7 @@ public class AdController {
             return "redirect:/my-ads";
         }
 
-        AdCreateDto dto = new AdCreateDto();
-        dto.setTitle(ad.getTitle());
-        dto.setDescription(ad.getDescription());
-        dto.setCategoryId(ad.getCategory().getId());
-        dto.setLocation(ad.getLocation());
-
-        model.addAttribute("adCreateDto", dto);
+        model.addAttribute("adCreateDto", AdCreateDto.from(ad));
         model.addAttribute("categories", adService.findAllCategories());
 
         model.addAttribute("editMode", true);

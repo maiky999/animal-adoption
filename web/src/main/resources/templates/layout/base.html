@@ -92,6 +92,16 @@
             document.getElementById('modal-container').innerHTML = '';
             document.body.style.overflow = 'auto';
         }
+        // A background HTMX request (chat refresh, message badge) can end on the login page - e.g. the session
+        // expired or the account's email changed. Instead of pasting the login page into a small piece
+        // of the current page, we go to the login page normally.
+        document.body.addEventListener('htmx:beforeSwap', function(evt) {
+            const finalUrl = evt.detail.xhr.responseURL || '';
+            if (new URL(finalUrl, window.location.href).pathname === '/login') {
+                evt.detail.shouldSwap = false;
+                window.location.href = finalUrl;
+            }
+        });
         document.body.addEventListener('htmx:afterSwap', function(evt) {
             if(evt.detail.target.id === 'modal-container' && evt.detail.target.innerHTML.trim() !== '') {
                 document.body.style.overflow = 'hidden';

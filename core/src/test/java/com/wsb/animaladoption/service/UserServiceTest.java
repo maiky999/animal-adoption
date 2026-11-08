@@ -10,10 +10,13 @@ import com.wsb.animaladoption.enums.RoleEnum;
 import com.wsb.animaladoption.enums.UserTypeEnum;
 import com.wsb.animaladoption.enums.VerificationResultEnum;
 import com.wsb.animaladoption.event.EmailChangeEvent;
+import com.wsb.animaladoption.event.PasswordResetEvent;
 import com.wsb.animaladoption.event.RegistrationEvent;
 import com.wsb.animaladoption.exception.LocalizedException;
+import com.wsb.animaladoption.model.PasswordResetToken;
 import com.wsb.animaladoption.model.User;
 import com.wsb.animaladoption.model.VerificationToken;
+import com.wsb.animaladoption.repository.PasswordResetTokenRepository;
 import com.wsb.animaladoption.repository.UserRepository;
 import com.wsb.animaladoption.repository.VerificationTokenRepository;
 import com.wsb.translations.TranslationService;
@@ -59,6 +62,12 @@ class UserServiceTest {
 
     @Mock
     private TranslationService translationService;
+
+    @Mock
+    private PasswordResetTokenRepository passwordResetTokenRepository;
+
+    @Mock
+    private LoginAttemptService loginAttemptService;
 
     @InjectMocks
     private UserServiceImpl userService;
@@ -252,5 +261,104 @@ class UserServiceTest {
         InOrder inOrder = inOrder(tokenRepository, userRepository);
         inOrder.verify(tokenRepository).deleteAll(List.of(expiredToken));
         inOrder.verify(userRepository).deleteAll(List.of(unverified));
+    }
+
+    // --- Forgot password ---
+
+    @Test
+    @DisplayName("Password reset: sends a link to a confirmed account and stores only the token hash")
+    void shouldSendPasswordResetLink() {
+        sampleUser.setEmailVerified(true);
+        when(userRepository.findByEmail("test@wsb.pl")).thenReturn(Optional.of(sampleUser));
+        when(passwordResetTokenRepository.findByUser(sampleUser)).thenReturn(Optional.empty());
+        when(translationService.getCurrentLocale()).thenReturn(Locale.of("pl"));
+
+        userService.requestPasswordReset("  Test@WSB.pl ");
+
+        ArgumentCaptor<PasswordResetEvent> eventCaptor = ArgumentCaptor.forClass(PasswordResetEvent.class);
+        verify(rabbitTemplate).convertAndSend(eq(RabbitMQConfig.EXCHANGE_EMAIL),
+                eq(RabbitMQConfig.ROUTING_KEY_PASSWORD_RESET), eventCaptor.capture());
+        String tokenFromEmail = eventCaptor.getValue().getResetToken();
+        assertEquals("test@wsb.pl", eventCaptor.getValue().getEmail());
+
+        ArgumentCaptor<PasswordResetToken> tokenCaptor = ArgumentCaptor.forClass(PasswordResetToken.class);
+        verify(passwordResetTokenRepository).save(tokenCaptor.capture());
+        // The database gets the hash, never the token from the email
+        assertNotEquals(tokenFromEmail, tokenCaptor.getValue().getTokenHash());
+        assertEquals(UserServiceImpl.hashToken(tokenFromEmail), tokenCaptor.getValue().getTokenHash());
+    }
+
+    @Test
+    @DisplayName("Password reset: an unknown email gets no link (and no error that would reveal it)")
+    void shouldSilentlyIgnoreUnknownEmail() {
+        when(userRepository.findByEmail("nieznany@wsb.pl")).thenReturn(Optional.empty());
+
+        assertDoesNotThrow(() -> userService.requestPasswordReset("nieznany@wsb.pl"));
+
+        verifyNoInteractions(rabbitTemplate, passwordResetTokenRepository);
+    }
+
+    @Test
+    @DisplayName("Password reset: an unconfirmed account gets no link")
+    void shouldNotSendResetLinkToUnverifiedAccount() {
+        when(userRepository.findByEmail("test@wsb.pl")).thenReturn(Optional.of(sampleUser));
+
+        userService.requestPasswordReset("test@wsb.pl");
+
+        verifyNoInteractions(rabbitTemplate, passwordResetTokenRepository);
+    }
+
+    @Test
+    @DisplayName("Password reset: a second request within the cooldown does not send another email")
+    void shouldNotResendResetLinkWithinCooldown() {
+        sampleUser.setEmailVerified(true);
+        PasswordResetToken recent = new PasswordResetToken("hash", sampleUser);
+        when(userRepository.findByEmail("test@wsb.pl")).thenReturn(Optional.of(sampleUser));
+        when(passwordResetTokenRepository.findByUser(sampleUser)).thenReturn(Optional.of(recent));
+
+        userService.requestPasswordReset("test@wsb.pl");
+
+        verifyNoInteractions(rabbitTemplate);
+        verify(passwordResetTokenRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Password reset: a valid link sets the new password, is deleted and lifts the login lock")
+    void shouldResetPasswordWithValidToken() {
+        PasswordResetToken token = new PasswordResetToken(UserServiceImpl.hashToken("abc"), sampleUser);
+        when(passwordResetTokenRepository.findByTokenHash(UserServiceImpl.hashToken("abc"))).thenReturn(Optional.of(token));
+        when(passwordEncoder.encode("noweHaslo123")).thenReturn("newEncoded");
+
+        boolean result = userService.resetPassword("abc", "noweHaslo123");
+
+        assertTrue(result);
+        assertEquals("newEncoded", sampleUser.getPasswordHash());
+        verify(userRepository).save(sampleUser);
+        verify(passwordResetTokenRepository).delete(token);
+        verify(loginAttemptService).loginSucceeded("test@wsb.pl");
+    }
+
+    @Test
+    @DisplayName("Password reset: an expired link does not change the password")
+    void shouldRejectExpiredResetToken() {
+        PasswordResetToken token = new PasswordResetToken(UserServiceImpl.hashToken("abc"), sampleUser);
+        token.setExpiryDate(LocalDateTime.now().minusMinutes(1));
+        when(passwordResetTokenRepository.findByTokenHash(UserServiceImpl.hashToken("abc"))).thenReturn(Optional.of(token));
+
+        boolean result = userService.resetPassword("abc", "noweHaslo123");
+
+        assertFalse(result);
+        assertEquals("encodedPassword", sampleUser.getPasswordHash());
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Password reset: an unknown or empty link is invalid")
+    void shouldRejectUnknownResetToken() {
+        when(passwordResetTokenRepository.findByTokenHash(any())).thenReturn(Optional.empty());
+
+        assertFalse(userService.isPasswordResetTokenValid("nieistniejacy"));
+        assertFalse(userService.isPasswordResetTokenValid(null));
+        assertFalse(userService.resetPassword("", "noweHaslo123"));
     }
 }

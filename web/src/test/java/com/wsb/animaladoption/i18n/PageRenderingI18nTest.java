@@ -1,13 +1,16 @@
 package com.wsb.animaladoption.i18n;
 
 import com.wsb.animaladoption.enums.AdStatusEnum;
+import com.wsb.animaladoption.enums.AnimalAgeEnum;
 import com.wsb.animaladoption.enums.RoleEnum;
 import com.wsb.animaladoption.enums.UserTypeEnum;
 import com.wsb.animaladoption.model.Ad;
 import com.wsb.animaladoption.model.Article;
 import com.wsb.animaladoption.model.Category;
 import com.wsb.animaladoption.model.Message;
+import com.wsb.animaladoption.model.PasswordResetToken;
 import com.wsb.animaladoption.model.User;
+import com.wsb.animaladoption.service.impl.UserServiceImpl;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -23,6 +26,7 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
 import org.springframework.transaction.annotation.Transactional;
 
 import java.nio.charset.StandardCharsets;
+import java.util.Set;
 import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -48,6 +52,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class PageRenderingI18nTest {
 
     private static final String AUTHOR_EMAIL = "fundacja@example.com";
+    private static final String RESET_TOKEN = "test-reset-token";
+
+    /** HTMX fragments - rendered without the page layout. */
+    private static final Set<String> FRAGMENTS = Set.of("/ads/{adId}", "/messages/{adId}/{otherUserId}/new?after=0");
 
     @MockitoBean
     private ConnectionFactory connectionFactory;
@@ -72,7 +80,14 @@ class PageRenderingI18nTest {
         User other = persistUser("jan@example.com", "Jan Kowalski", UserTypeEnum.PRIVATE, RoleEnum.USER);
 
         Ad ad = persistAd("Żółw szuka spokojnego domu", category, author, AdStatusEnum.ACTIVE);
-        persistAd("Gekon czeka na weryfikację", category, author, AdStatusEnum.PENDING);
+        ad.setAge(AnimalAgeEnum.SENIOR);
+        ad.setVaccinated(true);
+        Ad pending = persistAd("Gekon czeka na weryfikację", category, author, AdStatusEnum.PENDING);
+        // Corrected after an earlier rejection - the moderator sees the previous reason
+        pending.setRejectionReason("Brak zdjęć");
+
+        // A valid "set a new password" link (the database keeps only the hash of the token)
+        entityManager.persist(new PasswordResetToken(UserServiceImpl.hashToken(RESET_TOKEN), other));
 
         Article article = Article.builder()
                 .title("Jak dbać o żółwia")
@@ -100,6 +115,14 @@ class PageRenderingI18nTest {
                 Arguments.of("/", false, "Gady i płazy", "Reptiles and amphibians"),
                 Arguments.of("/ads", false, "Tablica ogłoszeń", "Listings board"),
                 Arguments.of("/ads/{adId}", false, "Wypełnij ankietę przedadopcyjną", "Fill in the pre-adoption survey"),
+                Arguments.of("/ads/{adId}", false, "Zaszczepiony", "Vaccinated"),
+                // Filters: case-insensitive search with Polish letters, location fragment, age and a feature
+                Arguments.of("/ads?q=ŻÓŁW&location=krak&age=SENIOR&vaccinated=true", false,
+                        "Żółw szuka spokojnego domu", "Żółw szuka spokojnego domu"),
+                Arguments.of("/ads?age=YOUNG", false, "Brak ogłoszeń spełniających kryteria", "No listings match your criteria"),
+                Arguments.of("/forgot-password", false, "Nie pamiętasz hasła?", "Forgot your password?"),
+                Arguments.of("/reset-password?token=" + RESET_TOKEN, false, "Ustaw nowe hasło", "Set a new password"),
+                Arguments.of("/messages/{adId}/{otherUserId}/new?after=0", true, "Dzień dobry!", "Dzień dobry!"),
                 Arguments.of("/articles", false, "Poradniki i Edukacja", "Guides and Education"),
                 Arguments.of("/articles/{articleId}", false, "Napisane przez eksperta", "Written by an expert"),
                 Arguments.of("/login", false, "Witaj ponownie", "Welcome back"),
@@ -112,6 +135,7 @@ class PageRenderingI18nTest {
                 Arguments.of("/messages", true, "Ty: Dzień dobry!", "You: Dzień dobry!"),
                 Arguments.of("/messages/{adId}/{otherUserId}", true, "Dotyczy ogłoszenia:", "Regarding listing:"),
                 Arguments.of("/moderation/ads", true, "Panel Moderatora", "Moderator Panel"),
+                Arguments.of("/moderation/ads", true, "Wcześniej odrzucone z powodu:", "Previously rejected because:"),
                 Arguments.of("/moderation/articles/new", true, "Panel Edukatora", "Educator Panel")
         );
     }
@@ -130,7 +154,8 @@ class PageRenderingI18nTest {
     @ParameterizedTest(name = "{0} -> EN: \"{3}\"")
     @MethodSource("pages")
     void shouldRenderPageInEnglish(String path, boolean authenticated, String polishText, String englishText) throws Exception {
-        String html = render(get(resolve(path)).param("lang", "en"), authenticated);
+        String resolved = resolve(path);
+        String html = render(get(resolved + (resolved.contains("?") ? "&" : "?") + "lang=en"), authenticated);
 
         assertThat(html).contains(englishText).doesNotContain("??");
         if (isFullPage(path)) {
@@ -139,9 +164,9 @@ class PageRenderingI18nTest {
         }
     }
 
-    /** The listing details window (/ads/{id}) is an HTMX fragment without a layout - the other pages have the full layout. */
+    /** HTMX fragments (e.g. the listing details window) have no layout - the other pages have the full layout. */
     private static boolean isFullPage(String path) {
-        return !path.equals("/ads/{adId}");
+        return !FRAGMENTS.contains(path);
     }
 
     private String render(MockHttpServletRequestBuilder request, boolean authenticated) throws Exception {

@@ -26,6 +26,7 @@ import org.springframework.web.method.support.ModelAndViewContainer;
 import java.util.Collections;
 import java.util.List;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -110,6 +111,62 @@ class MessageControllerTest {
                 .andExpect(model().attributeExists("messages"));
 
         verify(messageService, times(1)).getConversationAndMarkAsRead("test@example.com", 2L, 10L);
+    }
+
+    @Test
+    @DisplayName("GET /messages/{adId}/{otherUserId}/new - returns only new messages and the id of the newest one")
+    void shouldReturnOnlyNewMessagesForPolling() throws Exception {
+        User me = User.builder().id(1L).email("test@example.com").build();
+        User otherUser = User.builder().id(2L).email("other@example.com").build();
+        Ad ad = Ad.builder().id(10L).title("Pies").build();
+        Message newest = Message.builder().id(42L).content("Hej").build();
+
+        when(userService.findByEmail("test@example.com")).thenReturn(me);
+        when(userService.findById(2L)).thenReturn(otherUser);
+        when(adService.findById(10L)).thenReturn(ad);
+        when(messageService.canAccessConversation(ad, me, otherUser)).thenReturn(true);
+        when(messageService.getNewMessagesAndMarkAsRead("test@example.com", 2L, 10L, 41L)).thenReturn(List.of(newest));
+
+        mockMvc.perform(get("/messages/10/2/new").param("after", "41"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("messages/fragments/chat-messages :: poll"))
+                .andExpect(model().attribute("newMessages", List.of(newest)))
+                .andExpect(model().attribute("lastMessageId", 42L));
+    }
+
+    @Test
+    @DisplayName("GET /messages/{adId}/{otherUserId}/new - with nothing new the last id stays the same")
+    void shouldKeepLastIdWhenNothingNew() throws Exception {
+        User me = User.builder().id(1L).email("test@example.com").build();
+        User otherUser = User.builder().id(2L).email("other@example.com").build();
+        Ad ad = Ad.builder().id(10L).title("Pies").build();
+
+        when(userService.findByEmail("test@example.com")).thenReturn(me);
+        when(userService.findById(2L)).thenReturn(otherUser);
+        when(adService.findById(10L)).thenReturn(ad);
+        when(messageService.canAccessConversation(ad, me, otherUser)).thenReturn(true);
+        when(messageService.getNewMessagesAndMarkAsRead("test@example.com", 2L, 10L, 41L)).thenReturn(List.of());
+
+        mockMvc.perform(get("/messages/10/2/new").param("after", "41"))
+                .andExpect(model().attribute("lastMessageId", 41L));
+    }
+
+    @Test
+    @DisplayName("GET /messages/{adId}/{otherUserId}/new - a conversation the user may not see returns 404")
+    void shouldNotPollForbiddenConversation() throws Exception {
+        User me = User.builder().id(1L).email("test@example.com").build();
+        User otherUser = User.builder().id(2L).email("other@example.com").build();
+        Ad ad = Ad.builder().id(10L).title("Pies").build();
+
+        when(userService.findByEmail("test@example.com")).thenReturn(me);
+        when(userService.findById(2L)).thenReturn(otherUser);
+        when(adService.findById(10L)).thenReturn(ad);
+        when(messageService.canAccessConversation(ad, me, otherUser)).thenReturn(false);
+
+        mockMvc.perform(get("/messages/10/2/new").param("after", "0"))
+                .andExpect(status().isNotFound());
+
+        verify(messageService, never()).getNewMessagesAndMarkAsRead(any(), any(), any(), any());
     }
 
     @Test

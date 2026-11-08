@@ -1,8 +1,10 @@
 package com.wsb.animaladoption.controller;
 
 import com.wsb.animaladoption.dto.AdCreateDto;
+import com.wsb.animaladoption.dto.AdSearchCriteria;
 import com.wsb.animaladoption.dto.AdoptionFormDto;
 import com.wsb.animaladoption.enums.AdStatusEnum;
+import com.wsb.animaladoption.enums.AnimalAgeEnum;
 import com.wsb.animaladoption.model.Ad;
 import com.wsb.animaladoption.model.Category;
 import com.wsb.animaladoption.model.User;
@@ -11,10 +13,14 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.core.MethodParameter;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.test.web.servlet.MockMvc;
@@ -27,6 +33,8 @@ import org.springframework.web.method.support.ModelAndViewContainer;
 import java.util.Collections;
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.eq;
@@ -75,16 +83,39 @@ class AdControllerTest {
     @Test
     @DisplayName("GET /ads - should return the list of listings and the ads/list view")
     void shouldReturnAdsListPage() throws Exception {
-        when(adService.findActiveAds(null)).thenReturn(Collections.emptyList());
+        when(adService.searchActiveAds(any(AdSearchCriteria.class), eq(0))).thenReturn(Page.empty());
         when(adService.findAllCategories()).thenReturn(Collections.emptyList());
 
         mockMvc.perform(get("/ads"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("ads/list"))
-                .andExpect(model().attributeExists("ads"))
-                .andExpect(model().attributeExists("categories"));
+                .andExpect(model().attributeExists("ads", "adsPage", "categories", "criteria"))
+                .andExpect(model().attributeDoesNotExist("previousPageUrl", "nextPageUrl"));
 
-        verify(adService, times(1)).findActiveAds(null);
+        verify(adService, times(1)).searchActiveAds(any(AdSearchCriteria.class), eq(0));
+    }
+
+    @Test
+    @DisplayName("GET /ads?... - URL parameters become search criteria, page links keep the filters")
+    void shouldPassFiltersFromUrlToSearch() throws Exception {
+        // Page 2 (index 1) of 3 - both "previous" and "next" links should exist
+        Page<Ad> page = new PageImpl<>(List.of(), PageRequest.of(1, AdService.PAGE_SIZE), AdService.PAGE_SIZE * 3);
+        when(adService.searchActiveAds(any(AdSearchCriteria.class), eq(1))).thenReturn(page);
+
+        // Parameters in the URL itself (not .param()), just like a GET form sends them - the page links are built from it
+        mockMvc.perform(get("/ads?q=burek&age=YOUNG&vaccinated=true&sort=OLDEST&page=1"))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("previousPageUrl", "/ads?q=burek&age=YOUNG&vaccinated=true&sort=OLDEST&page=0"))
+                .andExpect(model().attribute("nextPageUrl", "/ads?q=burek&age=YOUNG&vaccinated=true&sort=OLDEST&page=2"));
+
+        ArgumentCaptor<AdSearchCriteria> captor = ArgumentCaptor.forClass(AdSearchCriteria.class);
+        verify(adService).searchActiveAds(captor.capture(), eq(1));
+        AdSearchCriteria criteria = captor.getValue();
+        assertEquals("burek", criteria.getQ());
+        assertEquals(AnimalAgeEnum.YOUNG, criteria.getAge());
+        assertEquals(Boolean.TRUE, criteria.getVaccinated());
+        assertNull(criteria.getSterilized());
+        assertEquals(AdSearchCriteria.Sort.OLDEST, criteria.getSort());
     }
 
     @Test

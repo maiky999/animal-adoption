@@ -37,7 +37,7 @@ class TranslationKeysUsageTest {
     private static final Pattern VALIDATION_KEY = Pattern.compile("\"\\{([a-zA-Z][\\w.]*)}\"");
     /** Keys passed as flash messages, error codes and exception keys. */
     private static final Pattern JAVA_KEY = Pattern.compile(
-            "\"((?:ads|adoption|verify|profile|articles|validation|email)\\.[\\w.]+)\"");
+            "\"((?:ads|adoption|verify|profile|articles|validation|email|passwordReset|moderation)\\.[\\w.]+)\"");
 
     private final MessageSource messageSource =
             new TranslationAutoConfiguration().messageSource(new TranslationProperties());

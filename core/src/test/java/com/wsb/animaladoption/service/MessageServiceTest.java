@@ -166,4 +166,29 @@ class MessageServiceTest {
         assertThat(conversations.get(0).getUnreadCount()).isEqualTo(2);
         assertThat(conversations.get(0).getOtherUser()).isEqualTo(otherUser);
     }
+
+    @Test
+    @DisplayName("getNewMessagesAndMarkAsRead - returns only newer messages and marks them as read")
+    void shouldReturnOnlyNewMessagesAndMarkThemAsRead() {
+        User me = User.builder().id(1L).email("me@example.com").build();
+        Message newer = Message.builder().id(8L).content("Nowa").build();
+        when(userRepository.findByEmail("me@example.com")).thenReturn(Optional.of(me));
+        when(messageRepository.findConversationAfter(10L, 1L, 2L, 7L)).thenReturn(List.of(newer));
+
+        List<Message> result = messageService.getNewMessagesAndMarkAsRead("me@example.com", 2L, 10L, 7L);
+
+        assertThat(result).containsExactly(newer);
+        verify(messageRepository).markConversationAsRead(10L, 2L, 1L);
+    }
+
+    @Test
+    @DisplayName("getNewMessagesAndMarkAsRead - with nothing new, no UPDATE is sent to the database")
+    void shouldNotMarkAnythingWhenNoNewMessages() {
+        User me = User.builder().id(1L).email("me@example.com").build();
+        when(userRepository.findByEmail("me@example.com")).thenReturn(Optional.of(me));
+        when(messageRepository.findConversationAfter(10L, 1L, 2L, 7L)).thenReturn(List.of());
+
+        assertThat(messageService.getNewMessagesAndMarkAsRead("me@example.com", 2L, 10L, 7L)).isEmpty();
+        verify(messageRepository, never()).markConversationAsRead(any(), any(), any());
+    }
 }

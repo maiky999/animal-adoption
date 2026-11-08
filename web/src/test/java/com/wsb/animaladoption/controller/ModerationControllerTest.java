@@ -15,6 +15,8 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import java.util.Collections;
 import java.util.List;
 
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -57,16 +59,36 @@ class ModerationControllerTest {
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/moderation/ads"));
 
-        verify(adService, times(1)).moderateAd(10L, true);
+        verify(adService, times(1)).approveAd(10L);
     }
 
     @Test
-    @DisplayName("POST /moderation/ads/{id}/reject - should reject the listing and redirect to the list")
+    @DisplayName("POST /moderation/ads/{id}/reject - should reject the listing with the reason and redirect to the list")
     void shouldRejectAdAndRedirect() throws Exception {
-        mockMvc.perform(post("/moderation/ads/10/reject"))
+        mockMvc.perform(post("/moderation/ads/10/reject").param("reason", "Zdjęcia nie przedstawiają zwierzęcia"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/moderation/ads"));
 
-        verify(adService, times(1)).moderateAd(10L, false);
+        verify(adService, times(1)).rejectAd(10L, "Zdjęcia nie przedstawiają zwierzęcia");
+    }
+
+    @Test
+    @DisplayName("POST /moderation/ads/{id}/reject - without a reason the listing is not rejected")
+    void shouldNotRejectWithoutReason() throws Exception {
+        mockMvc.perform(post("/moderation/ads/10/reject").param("reason", "   "))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/moderation/ads"))
+                .andExpect(flash().attribute("errorMessage", "moderation.ads.reject.reasonInvalid"));
+
+        verify(adService, never()).rejectAd(anyLong(), anyString());
+    }
+
+    @Test
+    @DisplayName("POST /moderation/ads/{id}/reject - a reason longer than the database column is not accepted")
+    void shouldNotRejectWithTooLongReason() throws Exception {
+        mockMvc.perform(post("/moderation/ads/10/reject").param("reason", "x".repeat(501)))
+                .andExpect(flash().attribute("errorMessage", "moderation.ads.reject.reasonInvalid"));
+
+        verify(adService, never()).rejectAd(anyLong(), anyString());
     }
 }

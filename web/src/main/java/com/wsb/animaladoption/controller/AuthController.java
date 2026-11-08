@@ -1,6 +1,7 @@
 package com.wsb.animaladoption.controller;
 
 import com.wsb.animaladoption.config.SessionAuthenticationUpdater;
+import com.wsb.animaladoption.dto.PasswordResetDto;
 import com.wsb.animaladoption.dto.UserRegistrationDto;
 import com.wsb.animaladoption.dto.VerificationResult;
 import com.wsb.animaladoption.security.AltchaService;
@@ -67,6 +68,49 @@ public class AuthController {
             }
         }
 
+        return "redirect:/login";
+    }
+
+    // --- "Forgot password?" ---
+
+    @GetMapping("/forgot-password")
+    public String showForgotPasswordForm() {
+        return "user/forgot-password";
+    }
+
+    @PostMapping("/forgot-password")
+    public String requestPasswordReset(@RequestParam("email") String email, RedirectAttributes redirectAttributes) {
+        userService.requestPasswordReset(email);
+        // Always the same message - whether the account exists or not - so the form does not reveal registered emails
+        redirectAttributes.addFlashAttribute("successMessage", "passwordReset.requested");
+        return "redirect:/login";
+    }
+
+    @GetMapping("/reset-password")
+    public String showResetPasswordForm(@RequestParam(name = "token", required = false) String token,
+                                        Model model, RedirectAttributes redirectAttributes) {
+        if (!userService.isPasswordResetTokenValid(token)) {
+            redirectAttributes.addFlashAttribute("errorMessage", "passwordReset.invalid");
+            return "redirect:/login";
+        }
+        PasswordResetDto dto = new PasswordResetDto();
+        dto.setToken(token);
+        model.addAttribute("passwordResetDto", dto);
+        return "user/reset-password";
+    }
+
+    @PostMapping("/reset-password")
+    public String resetPassword(@Valid @ModelAttribute("passwordResetDto") PasswordResetDto dto, BindingResult result,
+                                RedirectAttributes redirectAttributes) {
+        if (result.hasErrors()) {
+            return "user/reset-password";
+        }
+        if (!userService.resetPassword(dto.getToken(), dto.getNewPassword())) {
+            // e.g. the link expired while the form was open, or it was already used in another tab
+            redirectAttributes.addFlashAttribute("errorMessage", "passwordReset.invalid");
+            return "redirect:/login";
+        }
+        redirectAttributes.addFlashAttribute("successMessage", "passwordReset.success");
         return "redirect:/login";
     }
 

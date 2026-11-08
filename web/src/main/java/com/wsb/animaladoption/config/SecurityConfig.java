@@ -93,7 +93,8 @@ public class SecurityConfig {
                 "/", "/ads", "/ads/**", "/register",
                 "/login", "/css/**", "/js/**", "/images/**",
                 "/error", "/uploads/**", "/verify", "/users/**",
-                "/articles", "/articles/**", "/altcha/**"
+                "/articles", "/articles/**", "/altcha/**",
+                "/forgot-password", "/reset-password"
         };
     }
 }

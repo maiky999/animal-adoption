@@ -2,9 +2,11 @@ package com.wsb.animaladoption.service.impl;
 
 import com.wsb.animaladoption.config.RabbitMQConfig;
 import com.wsb.animaladoption.dto.AdCreateDto;
+import com.wsb.animaladoption.dto.AdSearchCriteria;
 import com.wsb.animaladoption.dto.AdoptionFormDto;
 import com.wsb.animaladoption.enums.AdStatusEnum;
 import com.wsb.animaladoption.enums.UserTypeEnum;
+import com.wsb.animaladoption.event.AdRejectedEvent;
 import com.wsb.animaladoption.event.AdoptionFormEvent;
 import com.wsb.animaladoption.exception.LocalizedException;
 import com.wsb.animaladoption.model.Ad;
@@ -16,8 +18,13 @@ import com.wsb.animaladoption.repository.MessageRepository;
 import com.wsb.animaladoption.repository.UserRepository;
 import com.wsb.animaladoption.service.AdService;
 import com.wsb.animaladoption.service.FileStorageService;
+import com.wsb.animaladoption.specification.AdSpecifications;
 import com.wsb.translations.TranslationService;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -41,6 +48,18 @@ public class AdServiceImpl implements AdService {
             return adRepository.findAllByCategoryIdAndStatusOrderByCreatedAtDesc(categoryId, AdStatusEnum.ACTIVE);
         }
         return adRepository.findAllByStatusOrderByCreatedAtDesc(AdStatusEnum.ACTIVE);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<Ad> searchActiveAds(AdSearchCriteria criteria, int page) {
+        Sort.Direction direction = criteria.getSort() == AdSearchCriteria.Sort.OLDEST
+                ? Sort.Direction.ASC : Sort.Direction.DESC;
+        // The id as the second sort key makes the order stable when two listings have the same date,
+        // so a listing never shows up on two pages (or on none) while browsing
+        Sort sort = Sort.by(direction, "createdAt").and(Sort.by(direction, "id"));
+        Pageable pageable = PageRequest.of(Math.max(page, 0), PAGE_SIZE, sort);
+        return adRepository.findAll(AdSpecifications.activeMatching(criteria), pageable);
     }
 
     @Override
@@ -88,20 +107,49 @@ public class AdServiceImpl implements AdService {
             throw new SecurityException("Brak uprawnień do edycji tego ogłoszenia");
         }
 
+        // Without this check the author could send status=ACTIVE in a hand-crafted request
+        // and publish a pending or rejected listing, skipping moderation
+        boolean allowed = switch (newStatus) {
+            case ARCHIVED -> ad.getStatus() != AdStatusEnum.ADOPTED && ad.getStatus() != AdStatusEnum.ARCHIVED;
+            case ADOPTED -> ad.getStatus() == AdStatusEnum.ACTIVE;
+            default -> false;
+        };
+        if (!allowed) {
+            throw new IllegalArgumentException("Niedozwolona zmiana statusu: " + ad.getStatus() + " -> " + newStatus);
+        }
+
         ad.setStatus(newStatus);
         adRepository.save(ad);
     }
 
     @Override
     @Transactional
-    public void moderateAd(Long adId, boolean approve) {
+    public void approveAd(Long adId) {
         Ad ad = findById(adId);
-        if (approve) {
-            ad.setStatus(AdStatusEnum.ACTIVE);
-        } else {
-            ad.setStatus(AdStatusEnum.REJECTED);
-        }
+        ad.setStatus(AdStatusEnum.ACTIVE);
+        ad.setRejectionReason(null);
         adRepository.save(ad);
+    }
+
+    @Override
+    @Transactional
+    public void rejectAd(Long adId, String reason) {
+        if (reason == null || reason.isBlank()) {
+            throw new IllegalArgumentException("Powód odrzucenia jest wymagany");
+        }
+        Ad ad = findById(adId);
+        ad.setStatus(AdStatusEnum.REJECTED);
+        ad.setRejectionReason(reason.trim());
+        adRepository.save(ad);
+
+        AdRejectedEvent event = new AdRejectedEvent(
+                ad.getAuthor().getEmail(),
+                ad.getAuthor().getDisplayName(),
+                ad.getTitle(),
+                ad.getRejectionReason(),
+                // We don't know which language the author uses - the email is sent in the default language
+                translationService.getDefaultLocale().toLanguageTag());
+        rabbitTemplate.convertAndSend(RabbitMQConfig.EXCHANGE_EMAIL, RabbitMQConfig.ROUTING_KEY_AD_REJECTED, event);
     }
 
     @Override
@@ -121,6 +169,7 @@ public class AdServiceImpl implements AdService {
                 .author(author)
                 .status(AdStatusEnum.PENDING)
                 .build();
+        dto.applyAnimalDetailsTo(ad);
 
         return adRepository.save(ad);
     }
@@ -138,6 +187,7 @@ public class AdServiceImpl implements AdService {
         ad.setDescription(dto.getDescription());
         ad.setLocation(dto.getLocation());
         ad.setCategory(categoryRepository.findById(dto.getCategoryId()).orElseThrow());
+        dto.applyAnimalDetailsTo(ad);
         if (dto.getImageFiles() != null && !dto.getImageFiles().isEmpty() && !dto.getImageFiles().get(0).isEmpty()) {
             List<String> newImages = fileStorageService.storeFiles(dto.getImageFiles());
             ad.setImageUrls(newImages);

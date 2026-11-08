@@ -3,8 +3,12 @@ package com.wsb.animaladoption.service;
 import com.wsb.animaladoption.service.impl.AdServiceImpl;
 import com.wsb.animaladoption.config.RabbitMQConfig;
 import com.wsb.animaladoption.dto.AdCreateDto;
+import com.wsb.animaladoption.dto.AdSearchCriteria;
 import com.wsb.animaladoption.dto.AdoptionFormDto;
 import com.wsb.animaladoption.enums.AdStatusEnum;
+import com.wsb.animaladoption.enums.AnimalAgeEnum;
+import com.wsb.animaladoption.enums.AnimalSexEnum;
+import com.wsb.animaladoption.event.AdRejectedEvent;
 import com.wsb.animaladoption.event.AdoptionFormEvent;
 import com.wsb.animaladoption.model.Ad;
 import com.wsb.animaladoption.model.Category;
@@ -25,6 +29,10 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import com.wsb.translations.TranslationService;
 import org.mockito.ArgumentCaptor;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 
 import java.util.Collections;
 import java.util.List;
@@ -111,9 +119,9 @@ class AdServiceTest {
     void shouldChangeAdStatusSuccessfully() {
         when(adRepository.findById(10L)).thenReturn(Optional.of(sampleAd));
 
-        adService.changeAdStatus(10L, AdStatusEnum.REJECTED, "autor@example.com");
+        adService.changeAdStatus(10L, AdStatusEnum.ADOPTED, "autor@example.com");
 
-        assertEquals(AdStatusEnum.REJECTED, sampleAd.getStatus());
+        assertEquals(AdStatusEnum.ADOPTED, sampleAd.getStatus());
         verify(adRepository, times(1)).save(sampleAd);
     }
 
@@ -123,21 +131,130 @@ class AdServiceTest {
         when(adRepository.findById(10L)).thenReturn(Optional.of(sampleAd));
 
         assertThrows(SecurityException.class, () ->
-                adService.changeAdStatus(10L, AdStatusEnum.REJECTED, "obcy@example.com")
+                adService.changeAdStatus(10L, AdStatusEnum.ARCHIVED, "obcy@example.com")
         );
         verify(adRepository, never()).save(any());
     }
 
     @Test
-    @DisplayName("Should approve a listing by a moderator")
-    void shouldModerateAdApprove() {
+    @DisplayName("The author must not publish a rejected listing themselves (that would skip moderation)")
+    void shouldNotLetAuthorPublishRejectedAd() {
+        sampleAd.setStatus(AdStatusEnum.REJECTED);
+        when(adRepository.findById(10L)).thenReturn(Optional.of(sampleAd));
+
+        assertThrows(IllegalArgumentException.class, () ->
+                adService.changeAdStatus(10L, AdStatusEnum.ACTIVE, "autor@example.com"));
+
+        assertEquals(AdStatusEnum.REJECTED, sampleAd.getStatus());
+        verify(adRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Only a published listing can be marked as adopted")
+    void shouldNotMarkPendingAdAsAdopted() {
         sampleAd.setStatus(AdStatusEnum.PENDING);
         when(adRepository.findById(10L)).thenReturn(Optional.of(sampleAd));
 
-        adService.moderateAd(10L, true);
+        assertThrows(IllegalArgumentException.class, () ->
+                adService.changeAdStatus(10L, AdStatusEnum.ADOPTED, "autor@example.com"));
+        verify(adRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("The author can close a rejected listing")
+    void shouldArchiveRejectedAd() {
+        sampleAd.setStatus(AdStatusEnum.REJECTED);
+        when(adRepository.findById(10L)).thenReturn(Optional.of(sampleAd));
+
+        adService.changeAdStatus(10L, AdStatusEnum.ARCHIVED, "autor@example.com");
+
+        assertEquals(AdStatusEnum.ARCHIVED, sampleAd.getStatus());
+    }
+
+    @Test
+    @DisplayName("Should approve a listing by a moderator and clear the previous rejection reason")
+    void shouldApproveAd() {
+        sampleAd.setStatus(AdStatusEnum.PENDING);
+        sampleAd.setRejectionReason("Brak zdjęć");
+        when(adRepository.findById(10L)).thenReturn(Optional.of(sampleAd));
+
+        adService.approveAd(10L);
 
         assertEquals(AdStatusEnum.ACTIVE, sampleAd.getStatus());
+        assertNull(sampleAd.getRejectionReason());
         verify(adRepository, times(1)).save(sampleAd);
+    }
+
+    @Test
+    @DisplayName("Rejecting saves the reason and sends it to the author by email (via the queue)")
+    void shouldRejectAdWithReasonAndNotifyAuthor() {
+        sampleAd.setStatus(AdStatusEnum.PENDING);
+        when(adRepository.findById(10L)).thenReturn(Optional.of(sampleAd));
+        when(translationService.getDefaultLocale()).thenReturn(Locale.of("pl"));
+
+        adService.rejectAd(10L, "  Zdjęcia nie przedstawiają zwierzęcia  ");
+
+        assertEquals(AdStatusEnum.REJECTED, sampleAd.getStatus());
+        assertEquals("Zdjęcia nie przedstawiają zwierzęcia", sampleAd.getRejectionReason());
+
+        ArgumentCaptor<AdRejectedEvent> captor = ArgumentCaptor.forClass(AdRejectedEvent.class);
+        verify(rabbitTemplate).convertAndSend(eq(RabbitMQConfig.EXCHANGE_EMAIL),
+                eq(RabbitMQConfig.ROUTING_KEY_AD_REJECTED), captor.capture());
+        assertEquals("autor@example.com", captor.getValue().getAuthorEmail());
+        assertEquals("Piesek szuka domu", captor.getValue().getAdTitle());
+        assertEquals("Zdjęcia nie przedstawiają zwierzęcia", captor.getValue().getReason());
+    }
+
+    @Test
+    @DisplayName("A rejection without a reason is not accepted")
+    void shouldNotRejectWithoutReason() {
+        assertThrows(IllegalArgumentException.class, () -> adService.rejectAd(10L, "   "));
+        verify(adRepository, never()).save(any());
+        verifyNoInteractions(rabbitTemplate);
+    }
+
+    @Test
+    @DisplayName("Search asks for one page, newest first by default")
+    @SuppressWarnings("unchecked")
+    void shouldSearchOnePageNewestFirst() {
+        when(adRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(Page.empty());
+
+        adService.searchActiveAds(new AdSearchCriteria(), -3);
+
+        ArgumentCaptor<Pageable> captor = ArgumentCaptor.forClass(Pageable.class);
+        verify(adRepository).findAll(any(Specification.class), captor.capture());
+        Pageable pageable = captor.getValue();
+        assertEquals(0, pageable.getPageNumber(), "a negative page number is treated as the first page");
+        assertEquals(AdService.PAGE_SIZE, pageable.getPageSize());
+        assertEquals(Sort.Direction.DESC, pageable.getSort().getOrderFor("createdAt").getDirection());
+    }
+
+    @Test
+    @DisplayName("Creating a listing saves the information about the animal")
+    void shouldSaveAnimalDetailsOnCreate() {
+        Category category = new Category(1L, "Psy");
+        when(userRepository.findByEmail("autor@example.com")).thenReturn(Optional.of(sampleUser));
+        when(categoryRepository.findById(1L)).thenReturn(Optional.of(category));
+        when(adRepository.save(any(Ad.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        AdCreateDto dto = new AdCreateDto();
+        dto.setTitle("Burek szuka domu");
+        dto.setDescription("Spokojny pies szuka kochającego domu.");
+        dto.setCategoryId(1L);
+        dto.setLocation("Kraków");
+        dto.setAge(AnimalAgeEnum.SENIOR);
+        dto.setSex(AnimalSexEnum.MALE);
+        dto.setVaccinated(true);
+        dto.setChipped(false);
+
+        Ad saved = adService.createAd(dto, "autor@example.com");
+
+        assertEquals(AnimalAgeEnum.SENIOR, saved.getAge());
+        assertEquals(AnimalSexEnum.MALE, saved.getSex());
+        assertNull(saved.getSize());
+        assertTrue(saved.getVaccinated());
+        assertFalse(saved.getChipped());
+        assertEquals(AdStatusEnum.PENDING, saved.getStatus());
     }
 
     @Test

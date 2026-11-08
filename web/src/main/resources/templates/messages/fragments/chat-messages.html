@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<!-- One message bubble. Shared by the full chat page and the automatic refresh, so both look exactly the same. -->
+<div th:fragment="bubble(msg)" class="flex w-full fade-in" th:classappend="${msg.sender.id == me.id} ? 'justify-end' : 'justify-start'">
+    <div class="max-w-[75%] md:max-w-[60%] flex flex-col">
+        <div class="p-3 rounded-2xl shadow-sm relative"
+             th:classappend="${msg.sender.id == me.id} ? 'bg-primary text-white rounded-tr-sm' : 'bg-white text-gray-800 border border-gray-100 rounded-tl-sm'">
+            <p class="text-sm whitespace-pre-wrap leading-relaxed" th:text="${msg.content}">Treść wiadomości...</p>
+        </div>
+        <!-- Date and time -->
+        <span class="text-[10px] text-gray-400 mt-1 px-1"
+              th:classappend="${msg.sender.id == me.id} ? 'text-right' : 'text-left'"
+              th:text="${#temporals.format(msg.sentAt, 'dd.MM.yyyy HH:mm')}">14:30</span>
+    </div>
+</div>
+
+<!--
+    Invisible element that asks the server for new messages every 4 seconds (HTMX polling),
+    only while the browser tab is visible - a chat open in a background tab does not load the server.
+    The address contains the id of the last message the page already shows (after=...).
+-->
+<div th:fragment="poller" id="chat-poller"
+     th:attr="hx-get=@{/messages/{adId}/{userId}/new(adId=${ad.id}, userId=${otherUser.id}, after=${lastMessageId})}"
+     hx-trigger="every 4s [document.visibilityState === 'visible']"
+     hx-swap="outerHTML"></div>
+
+<!--
+    Server response to one refresh:
+    1. a new poller (replaces the old one) - with the updated id of the last message,
+    2. new messages, if any. hx-swap-oob ("out of band") tells HTMX to append them at the end of #chat-container,
+       even though the request was sent by the poller element.
+-->
+<th:block th:fragment="poll">
+    <div th:replace="~{:: poller}"></div>
+    <div th:unless="${#lists.isEmpty(newMessages)}" hx-swap-oob="beforeend:#chat-container">
+        <!-- th:each on a separate th:block, because th:replace is processed before th:each on the same element -->
+        <th:block th:each="msg : ${newMessages}">
+            <div th:replace="~{:: bubble(${msg})}"></div>
+        </th:block>
+    </div>
+</th:block>
+
+</body>
+</html>

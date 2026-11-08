@@ -19,6 +19,19 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
                                    @Param("user1Id") Long user1Id,
                                    @Param("user2Id") Long user2Id);
 
+    /**
+     * Messages of the conversation newer than the given one (ids grow with every new message).
+     * Used by the chat to fetch only what arrived since the last refresh, instead of the whole conversation.
+     */
+    @Query("SELECT m FROM Message m WHERE m.relatedAd.id = :adId AND m.id > :afterId AND " +
+            "((m.sender.id = :user1Id AND m.receiver.id = :user2Id) OR " +
+            "(m.sender.id = :user2Id AND m.receiver.id = :user1Id)) " +
+            "ORDER BY m.id ASC")
+    List<Message> findConversationAfter(@Param("adId") Long adId,
+                                        @Param("user1Id") Long user1Id,
+                                        @Param("user2Id") Long user2Id,
+                                        @Param("afterId") Long afterId);
+
     /** Checks whether the two users have exchanged at least one message about the given listing. */
     @Query("SELECT COUNT(m) > 0 FROM Message m WHERE m.relatedAd.id = :adId AND " +
             "((m.sender.id = :user1Id AND m.receiver.id = :user2Id) OR " +

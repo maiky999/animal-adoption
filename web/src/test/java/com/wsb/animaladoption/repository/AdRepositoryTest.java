@@ -1,6 +1,9 @@
 package com.wsb.animaladoption.repository;
 
+import com.wsb.animaladoption.dto.AdSearchCriteria;
 import com.wsb.animaladoption.enums.AdStatusEnum;
+import com.wsb.animaladoption.enums.AnimalAgeEnum;
+import com.wsb.animaladoption.specification.AdSpecifications;
 import com.wsb.animaladoption.enums.RoleEnum;
 import com.wsb.animaladoption.enums.UserTypeEnum;
 import com.wsb.animaladoption.model.Ad;
@@ -13,6 +16,9 @@ import org.junit.jupiter.api.Test;
 import org.springframework.amqp.rabbit.connection.ConnectionFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -132,6 +138,77 @@ class AdRepositoryTest {
         assertThat(result).hasSize(1);
         assertThat(result.get(0).getTitle()).isEqualTo("Ogłoszenie Jana");
         assertThat(result.get(0).getAuthor().getEmail()).isEqualTo("jan@example.com");
+    }
+
+    // --- Listings board search (AdSpecifications) - run against a real database, so the generated SQL is checked too ---
+
+    @Test
+    @DisplayName("Search - only active listings, filtered by animal information")
+    void shouldSearchActiveAdsByAnimalDetails() {
+        Ad youngVaccinated = createAndPersistAd("Szczeniak Burek", categoryDogs, user1, AdStatusEnum.ACTIVE, LocalDateTime.now());
+        youngVaccinated.setAge(AnimalAgeEnum.YOUNG);
+        youngVaccinated.setVaccinated(true);
+        Ad youngNotVaccinated = createAndPersistAd("Szczeniak Azor", categoryDogs, user1, AdStatusEnum.ACTIVE, LocalDateTime.now());
+        youngNotVaccinated.setAge(AnimalAgeEnum.YOUNG);
+        Ad pendingYoung = createAndPersistAd("Szczeniak w weryfikacji", categoryDogs, user1, AdStatusEnum.PENDING, LocalDateTime.now());
+        pendingYoung.setAge(AnimalAgeEnum.YOUNG);
+        pendingYoung.setVaccinated(true);
+        entityManager.flush();
+
+        AdSearchCriteria criteria = new AdSearchCriteria();
+        criteria.setAge(AnimalAgeEnum.YOUNG);
+        criteria.setVaccinated(true);
+
+        List<Ad> result = adRepository.findAll(AdSpecifications.activeMatching(criteria));
+
+        assertThat(result).extracting(Ad::getTitle).containsExactly("Szczeniak Burek");
+    }
+
+    @Test
+    @DisplayName("Search - title and location are matched case-insensitively, also with Polish letters")
+    void shouldSearchByTitleAndLocationIgnoringCase() {
+        createAndPersistAd("Żółw Leon", categoryCats, user1, AdStatusEnum.ACTIVE, LocalDateTime.now());
+        createAndPersistAd("Kot Filemon", categoryCats, user1, AdStatusEnum.ACTIVE, LocalDateTime.now());
+
+        AdSearchCriteria criteria = new AdSearchCriteria();
+        criteria.setQ("  żÓŁw ");
+        criteria.setLocation("śLĄ");
+
+        List<Ad> result = adRepository.findAll(AdSpecifications.activeMatching(criteria));
+
+        assertThat(result).extracting(Ad::getTitle).containsExactly("Żółw Leon");
+    }
+
+    @Test
+    @DisplayName("Search - % and _ typed by the user are treated as normal characters, not wildcards")
+    void shouldEscapeLikeWildcards() {
+        createAndPersistAd("Pies na 100% przyjazny", categoryDogs, user1, AdStatusEnum.ACTIVE, LocalDateTime.now());
+        createAndPersistAd("Pies przyjazny", categoryDogs, user1, AdStatusEnum.ACTIVE, LocalDateTime.now());
+
+        AdSearchCriteria percent = new AdSearchCriteria();
+        percent.setQ("100%");
+        AdSearchCriteria underscore = new AdSearchCriteria();
+        underscore.setQ("_");
+
+        assertThat(adRepository.findAll(AdSpecifications.activeMatching(percent)))
+                .extracting(Ad::getTitle).containsExactly("Pies na 100% przyjazny");
+        assertThat(adRepository.findAll(AdSpecifications.activeMatching(underscore))).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Search - results are split into pages of the requested size")
+    void shouldReturnPagedResults() {
+        for (int i = 0; i < 5; i++) {
+            createAndPersistAd("Kot numer " + i, categoryCats, user1, AdStatusEnum.ACTIVE, LocalDateTime.now());
+        }
+
+        // Sorted by title, because @CreationTimestamp gives all five listings practically the same date
+        Page<Ad> secondPage = adRepository.findAll(AdSpecifications.activeMatching(new AdSearchCriteria()),
+                PageRequest.of(1, 2, Sort.by("title")));
+
+        assertThat(secondPage.getTotalElements()).isEqualTo(5);
+        assertThat(secondPage.getTotalPages()).isEqualTo(3);
+        assertThat(secondPage.getContent()).extracting(Ad::getTitle).containsExactly("Kot numer 2", "Kot numer 3");
     }
 
     private Ad createAndPersistAd(String title, Category category, User author,

@@ -87,6 +87,20 @@ public class MessageServiceImpl implements MessageService {
     }
 
     @Override
+    @Transactional
+    public List<Message> getNewMessagesAndMarkAsRead(String currentUserEmail, Long otherUserId, Long adId,
+                                                     Long afterMessageId) {
+        User currentUser = userRepository.findByEmail(currentUserEmail).orElseThrow();
+        List<Message> newMessages = messageRepository.findConversationAfter(
+                adId, currentUser.getId(), otherUserId, afterMessageId == null ? 0L : afterMessageId);
+        // Marking is skipped when nothing new arrived - most refreshes end here without any UPDATE
+        if (!newMessages.isEmpty()) {
+            messageRepository.markConversationAsRead(adId, otherUserId, currentUser.getId());
+        }
+        return newMessages;
+    }
+
+    @Override
     public List<ConversationPreviewDto> getUserConversations(String email) {
         User currentUser = userRepository.findByEmail(email).orElseThrow();
         List<Message> allMessages = messageRepository.findBySenderIdOrReceiverIdOrderBySentAtDesc(currentUser.getId(), currentUser.getId());

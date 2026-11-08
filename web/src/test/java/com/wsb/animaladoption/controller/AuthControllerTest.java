@@ -23,6 +23,8 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.time.Instant;
 
+import static org.hamcrest.Matchers.hasProperty;
+import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
@@ -244,5 +246,79 @@ class AuthControllerTest {
                 .andExpect(model().attributeHasErrors("userRegistrationDto"));
 
         verify(userService, never()).registerNewUser(any(UserRegistrationDto.class));
+    }
+
+    // --- Forgot password ---
+
+    @Test
+    @DisplayName("POST /forgot-password - always the same message, whether the account exists or not")
+    void shouldShowSameMessageAfterPasswordResetRequest() throws Exception {
+        mockMvc.perform(post("/forgot-password").param("email", "ktokolwiek@example.com"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/login"))
+                .andExpect(flash().attribute("successMessage", "passwordReset.requested"));
+
+        verify(userService).requestPasswordReset("ktokolwiek@example.com");
+    }
+
+    @Test
+    @DisplayName("GET /reset-password - a valid link shows the form with the token in a hidden field")
+    void shouldShowResetFormForValidToken() throws Exception {
+        when(userService.isPasswordResetTokenValid("abc")).thenReturn(true);
+
+        mockMvc.perform(get("/reset-password").param("token", "abc"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("user/reset-password"))
+                .andExpect(model().attribute("passwordResetDto", hasProperty("token", is("abc"))));
+    }
+
+    @Test
+    @DisplayName("GET /reset-password - an invalid link redirects to login with an error")
+    void shouldRedirectForInvalidResetToken() throws Exception {
+        when(userService.isPasswordResetTokenValid("zly")).thenReturn(false);
+
+        mockMvc.perform(get("/reset-password").param("token", "zly"))
+                .andExpect(redirectedUrl("/login"))
+                .andExpect(flash().attribute("errorMessage", "passwordReset.invalid"));
+    }
+
+    @Test
+    @DisplayName("POST /reset-password - sets the new password and redirects to login")
+    void shouldResetPassword() throws Exception {
+        when(userService.resetPassword("abc", "noweHaslo123")).thenReturn(true);
+
+        mockMvc.perform(post("/reset-password")
+                        .param("token", "abc")
+                        .param("newPassword", "noweHaslo123")
+                        .param("confirmPassword", "noweHaslo123"))
+                .andExpect(redirectedUrl("/login"))
+                .andExpect(flash().attribute("successMessage", "passwordReset.success"));
+    }
+
+    @Test
+    @DisplayName("POST /reset-password - different passwords in both fields show the form again")
+    void shouldRejectMismatchedPasswords() throws Exception {
+        mockMvc.perform(post("/reset-password")
+                        .param("token", "abc")
+                        .param("newPassword", "noweHaslo123")
+                        .param("confirmPassword", "inneHaslo123"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("user/reset-password"))
+                .andExpect(model().attributeHasFieldErrors("passwordResetDto", "passwordConfirmed"));
+
+        verify(userService, never()).resetPassword(any(), any());
+    }
+
+    @Test
+    @DisplayName("POST /reset-password - a link that expired in the meantime redirects to login with an error")
+    void shouldHandleTokenExpiredWhileFormWasOpen() throws Exception {
+        when(userService.resetPassword("abc", "noweHaslo123")).thenReturn(false);
+
+        mockMvc.perform(post("/reset-password")
+                        .param("token", "abc")
+                        .param("newPassword", "noweHaslo123")
+                        .param("confirmPassword", "noweHaslo123"))
+                .andExpect(redirectedUrl("/login"))
+                .andExpect(flash().attribute("errorMessage", "passwordReset.invalid"));
     }
 }

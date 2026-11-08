@@ -64,15 +64,9 @@
                         <i class="ph-bold ph-plus sm:mr-1 text-lg"></i> <span class="hidden sm:inline">[[#{nav.addAd}]]</span>
                     </a>
 
-                    <a th:href="@{/messages}" class="text-textMain/70 hover:text-primary hover:bg-accent p-2.5 rounded-2xl transition flex items-center relative" th:title="#{nav.messages}"
-                       th:with="unreadCount=${messageService.getUnreadMessagesCount(#authentication.name)}">
-
+                    <a th:href="@{/messages}" class="text-textMain/70 hover:text-primary hover:bg-accent p-2.5 rounded-2xl transition flex items-center relative" th:title="#{nav.messages}">
                         <i class="ph-fill ph-chat-circle-text text-2xl"></i>
-                        <span th:if="${unreadCount > 0}" class="absolute top-1 right-1 flex h-4 w-4">
-                            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                            <span class="relative inline-flex rounded-full h-4 w-4 bg-red-500 text-[10px] font-black text-white items-center justify-center border-2 border-surface"
-                                  th:text="${unreadCount > 99 ? '99+' : unreadCount}">1</span>
-                        </span>
+                        <span th:replace="~{layout/navbar :: unread-badge}"></span>
                     </a>
 
                     <a th:href="@{/profile}" class="text-textMain/70 hover:text-primary hover:bg-accent p-2.5 rounded-2xl transition flex items-center" th:title="#{nav.profile}">
@@ -90,5 +84,22 @@
         </div>
     </div>
 </nav>
+
+<!--
+    Unread messages badge. Rendered inside the navigation and, every 30 seconds (only while the tab is visible),
+    fetched again from /messages/unread-badge, so a new message shows up without reloading the page.
+    The wrapper is always present (also with 0 unread), otherwise there would be nothing to refresh.
+-->
+<span th:fragment="unread-badge" id="unread-badge"
+      th:with="unreadCount=${messageService.getUnreadMessagesCount(#authentication.name)}"
+      th:attr="hx-get=@{/messages/unread-badge}"
+      hx-trigger="every 30s [document.visibilityState === 'visible']"
+      hx-swap="outerHTML">
+    <span th:if="${unreadCount > 0}" class="absolute top-1 right-1 flex h-4 w-4">
+        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+        <span class="relative inline-flex rounded-full h-4 w-4 bg-red-500 text-[10px] font-black text-white items-center justify-center border-2 border-surface"
+              th:text="${unreadCount > 99 ? '99+' : unreadCount}">1</span>
+    </span>
+</span>
 </body>
 </html>

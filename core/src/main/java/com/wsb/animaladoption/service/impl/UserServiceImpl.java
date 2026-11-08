@@ -8,13 +8,17 @@ import com.wsb.animaladoption.dto.VerificationResult;
 import com.wsb.animaladoption.enums.RoleEnum;
 import com.wsb.animaladoption.enums.VerificationResultEnum;
 import com.wsb.animaladoption.event.EmailChangeEvent;
+import com.wsb.animaladoption.event.PasswordResetEvent;
 import com.wsb.animaladoption.event.RegistrationEvent;
 import com.wsb.animaladoption.exception.LocalizedException;
+import com.wsb.animaladoption.model.PasswordResetToken;
 import com.wsb.animaladoption.model.User;
 import com.wsb.animaladoption.model.VerificationToken;
+import com.wsb.animaladoption.repository.PasswordResetTokenRepository;
 import com.wsb.animaladoption.repository.UserRepository;
 import com.wsb.animaladoption.repository.VerificationTokenRepository;
 import com.wsb.animaladoption.service.FileStorageService;
+import com.wsb.animaladoption.service.LoginAttemptService;
 import com.wsb.animaladoption.service.UserService;
 import com.wsb.translations.TranslationService;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,7 +27,14 @@ import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
+import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.Base64;
+import java.util.HexFormat;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -37,6 +48,13 @@ public class UserServiceImpl implements UserService {
     private final RabbitTemplate rabbitTemplate;
     private final FileStorageService fileStorageService;
     private final TranslationService translationService;
+    private final PasswordResetTokenRepository passwordResetTokenRepository;
+    private final LoginAttemptService loginAttemptService;
+
+    /** Minimum time between two reset emails for one account - protects the mailbox from being flooded. */
+    static final Duration PASSWORD_RESET_COOLDOWN = Duration.ofMinutes(2);
+
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
     @Override
     @Transactional
@@ -178,6 +196,95 @@ public class UserServiceImpl implements UserService {
     public User findById(Long id) {
         return userRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Nie znaleziono użytkownika"));
+    }
+
+    @Override
+    @Transactional
+    public void requestPasswordReset(String email) {
+        String normalizedEmail = email == null ? "" : email.trim().toLowerCase();
+        Optional<User> userOptional = userRepository.findByEmail(normalizedEmail);
+        // An unconfirmed account first has to be activated with the registration link (and it may soon be deleted
+        // by the cleanup job). In both "no" cases we simply do nothing - the caller always shows the same message.
+        if (userOptional.isEmpty() || !userOptional.get().isEmailVerified()) {
+            return;
+        }
+        User user = userOptional.get();
+
+        Optional<PasswordResetToken> existing = passwordResetTokenRepository.findByUser(user);
+        if (existing.isPresent()
+                && existing.get().getCreatedAt().isAfter(LocalDateTime.now().minus(PASSWORD_RESET_COOLDOWN))) {
+            // A link was sent a moment ago - it is still valid, so we do not send another one
+            return;
+        }
+
+        String token = generateResetToken();
+        PasswordResetToken resetToken = existing.orElseGet(() -> new PasswordResetToken(hashToken(token), user));
+        resetToken.renew(hashToken(token));
+        passwordResetTokenRepository.save(resetToken);
+
+        PasswordResetEvent event = new PasswordResetEvent(user.getEmail(), token,
+                translationService.getCurrentLocale().toLanguageTag());
+        rabbitTemplate.convertAndSend(RabbitMQConfig.EXCHANGE_EMAIL, RabbitMQConfig.ROUTING_KEY_PASSWORD_RESET, event);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public boolean isPasswordResetTokenValid(String token) {
+        return findValidResetToken(token).isPresent();
+    }
+
+    @Override
+    @Transactional
+    public boolean resetPassword(String token, String newPassword) {
+        Optional<PasswordResetToken> resetToken = findValidResetToken(token);
+        if (resetToken.isEmpty()) {
+            return false;
+        }
+
+        User user = resetToken.get().getUser();
+        user.setPasswordHash(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
+        // One-time link - deleted right after use
+        passwordResetTokenRepository.delete(resetToken.get());
+        // The user has just proven they own the mailbox, so a possible lock after wrong passwords is lifted
+        loginAttemptService.loginSucceeded(user.getEmail());
+        // "Remember me" cookies issued earlier stop working on their own - their signature contains the password hash
+        return true;
+    }
+
+    @Override
+    @Transactional
+    public int deleteExpiredPasswordResetTokens() {
+        return passwordResetTokenRepository.deleteExpired(LocalDateTime.now());
+    }
+
+    private Optional<PasswordResetToken> findValidResetToken(String token) {
+        if (token == null || token.isBlank()) {
+            return Optional.empty();
+        }
+        return passwordResetTokenRepository.findByTokenHash(hashToken(token))
+                .filter(t -> !t.isExpired());
+    }
+
+    /** 32 random bytes (256 bits) from a cryptographically secure generator, written in a URL-safe form. */
+    private static String generateResetToken() {
+        byte[] bytes = new byte[32];
+        SECURE_RANDOM.nextBytes(bytes);
+        return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
+    }
+
+    /**
+     * SHA-256 of the token. A plain (fast) hash is enough here - unlike passwords, the token is long and random,
+     * so it cannot be guessed by trying many values, and BCrypt would only slow down the lookup.
+     */
+    public static String hashToken(String token) {
+        try {
+            byte[] digest = MessageDigest.getInstance("SHA-256").digest(token.getBytes(StandardCharsets.UTF_8));
+            return HexFormat.of().formatHex(digest);
+        } catch (NoSuchAlgorithmException e) {
+            // Every Java implementation is required to support SHA-256
+            throw new IllegalStateException(e);
+        }
     }
 
     @Override

@@ -4,6 +4,8 @@ import com.wsb.animaladoption.enums.AdStatusEnum;
 import com.wsb.animaladoption.model.Ad;
 import com.wsb.animaladoption.service.AdService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Controller;
@@ -28,7 +30,16 @@ public class UserController {
     public String changeAdStatus(@PathVariable Long id,
                                  @RequestParam("status") AdStatusEnum status,
                                  @AuthenticationPrincipal UserDetails currentUser) {
-        adService.changeAdStatus(id, status, currentUser.getUsername());
+        try {
+            adService.changeAdStatus(id, status, currentUser.getUsername());
+        } catch (SecurityException e) {
+            // Someone else's listing - 404, so it is not revealed that it exists
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        } catch (IllegalArgumentException e) {
+            // A status change the author may not make (e.g. publishing without moderation) - only possible
+            // with a hand-crafted request, because the page shows only the allowed buttons
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
+        }
         return "redirect:/my-ads";
     }
 }

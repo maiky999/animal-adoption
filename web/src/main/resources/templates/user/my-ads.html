@@ -79,8 +79,15 @@
 
                 <!-- Warning for rejected listings -->
                 <div th:if="${ad.status.name() == 'REJECTED'}" class="bg-red-50 text-red-600 p-2 rounded-lg text-xs font-medium mb-3 flex items-start">
-                    <i class="ph-fill ph-warning-circle mr-1 mt-0.5 text-base"></i>
-                    [[#{myAds.rejected.info}]]
+                    <i class="ph-fill ph-warning-circle mr-1 mt-0.5 text-base flex-shrink-0"></i>
+                    <div>
+                        <p>[[#{myAds.rejected.info}]]</p>
+                        <!-- Reason from the moderator (older rejections may not have one) -->
+                        <p th:if="${ad.rejectionReason != null}" class="mt-1 text-red-700">
+                            <strong>[[#{myAds.rejected.reason}]]</strong>
+                            <span class="whitespace-pre-wrap" th:text="${ad.rejectionReason}">Powód</span>
+                        </p>
+                    </div>
                 </div>
 
                 <!-- Action buttons (only for active, pending or rejected listings) -->
