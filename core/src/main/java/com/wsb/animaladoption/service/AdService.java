@@ -65,6 +65,27 @@ public interface AdService {
      */
     void changeAdStatus(Long adId, AdStatusEnum newStatus, String authorEmail);
 
+    /** Number of listings waiting for moderation (the badge in the navigation). */
+    long countPendingAds();
+
+    /**
+     * Moderation: removes a listing (in any status) because it breaks the rules, and emails the author the reason.
+     * The listing is hidden and can no longer be edited, but stays in the database for the conversations about it.
+     *
+     * @throws IllegalArgumentException if the reason is empty
+     * @throws com.wsb.animaladoption.exception.LocalizedException if the listing has already been removed
+     */
+    void removeAd(Long adId, String reason);
+
+    /**
+     * Removes all listings of the author that are not removed yet - used when the author's account is blocked.
+     * Unlike {@link #removeAd(Long, String)} no emails are sent (one per listing would be spam;
+     * the blocked user sees the reason of the ban when trying to log in).
+     *
+     * @return number of removed listings
+     */
+    int removeAllAdsOfAuthor(Long authorId, String reason);
+
     /** Moderation: publishes the listing. */
     void approveAd(Long adId);
 

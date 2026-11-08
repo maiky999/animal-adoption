@@ -26,7 +26,11 @@ public class CustomUserDetailsService implements UserDetailsService {
                 user.getEmail(),
                 user.getPasswordHash(),
                 user.isEmailVerified(),
-                true,
+                // accountNonExpired = false for an account blocked by a moderator. Spring Security then rejects
+                // the login (and "remember me") with AccountExpiredException - we use this flag for bans, because
+                // the "locked" flag is already used for wrong passwords, and the user must see a different message
+                // (LoginFailureHandler shows the reason and the end of the ban).
+                !user.isBanned(),
                 true,
                 // A locked account is rejected by Spring Security BEFORE the password is checked (LockedException),
                 // so during the lock even the correct password does not help - guessing makes no sense

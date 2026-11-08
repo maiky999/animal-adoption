@@ -37,6 +37,17 @@
       <span>[[#{login.sessionExpired}]]</span>
     </div>
 
+    <!-- Account blocked by a moderator: reason and end of the ban (see LoginFailureHandler / StaleSessionInterceptor) -->
+    <div th:if="${banNotice}" class="bg-red-50 text-red-700 p-4 rounded-xl text-sm mb-6 border border-red-200 flex items-start shadow-sm fade-in">
+      <i class="ph-fill ph-prohibit text-2xl mr-3 mt-0.5"></i>
+      <div>
+        <strong>[[#{login.banned.title}]]</strong><br>
+        <span th:text="#{login.banned.until(${#temporals.format(banNotice.bannedUntil, 'dd.MM.yyyy HH:mm')})}">Do 01.01.2027 12:00</span><br>
+        <span class="font-bold">[[#{login.banned.reason}]]</span>
+        <span class="whitespace-pre-wrap" th:text="${banNotice.reason}">Powód</span>
+      </div>
+    </div>
+
     <!-- Standard login error (wrong password / no such user) -->
     <div th:if="${param.error} and (${session['SPRING_SECURITY_LAST_EXCEPTION']} == null or !(${#strings.contains(session['SPRING_SECURITY_LAST_EXCEPTION'].toString(), 'DisabledException')} or ${#strings.contains(session['SPRING_SECURITY_LAST_EXCEPTION'].toString(), 'LockedException')}))"
          class="bg-red-50 text-red-600 p-4 rounded-xl text-sm mb-6 border border-red-100 flex items-center shadow-sm fade-in">

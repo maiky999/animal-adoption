@@ -67,6 +67,18 @@
     </div>
 </div>
 
+<!-- Result of a moderation action (removing a listing, blocking an account) - shown on whatever page the moderator returns to -->
+<div th:if="${moderationMessage != null or moderationError != null}" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6 w-full fade-in z-40 relative">
+    <div th:if="${moderationMessage}" class="bg-green-50 text-green-700 p-4 rounded-2xl text-sm border border-green-200 flex items-center shadow-soft">
+        <i class="ph-fill ph-shield-check text-2xl mr-3 text-green-500"></i>
+        <span class="font-bold" th:text="#{${moderationMessage}}"></span>
+    </div>
+    <div th:if="${moderationError}" class="bg-red-50 text-red-700 p-4 rounded-2xl text-sm border border-red-200 flex items-center shadow-soft">
+        <i class="ph-fill ph-warning-circle text-2xl mr-3 text-red-500"></i>
+        <span class="font-bold" th:text="#{${moderationError}}"></span>
+    </div>
+</div>
+
 <main class="flex-grow flex flex-col w-full relative z-10" th:replace="${content}">
     <!-- Content goes here -->
 </main>

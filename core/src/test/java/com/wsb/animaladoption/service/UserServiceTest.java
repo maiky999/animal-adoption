@@ -6,6 +6,7 @@ import com.wsb.animaladoption.dto.UserPasswordUpdateDto;
 import com.wsb.animaladoption.dto.UserProfileUpdateDto;
 import com.wsb.animaladoption.dto.UserRegistrationDto;
 import com.wsb.animaladoption.dto.VerificationResult;
+import com.wsb.animaladoption.enums.AccountStateEnum;
 import com.wsb.animaladoption.enums.RoleEnum;
 import com.wsb.animaladoption.enums.UserTypeEnum;
 import com.wsb.animaladoption.enums.VerificationResultEnum;
@@ -68,6 +69,9 @@ class UserServiceTest {
 
     @Mock
     private LoginAttemptService loginAttemptService;
+
+    @Mock
+    private AdService adService;
 
     @InjectMocks
     private UserServiceImpl userService;
@@ -360,5 +364,82 @@ class UserServiceTest {
         assertFalse(userService.isPasswordResetTokenValid("nieistniejacy"));
         assertFalse(userService.isPasswordResetTokenValid(null));
         assertFalse(userService.resetPassword("", "noweHaslo123"));
+    }
+
+    // --- Blocking accounts ---
+
+    @Test
+    @DisplayName("Ban: blocks the account for the given number of hours with the reason")
+    void shouldBanUserForGivenHours() {
+        when(userRepository.findById(1L)).thenReturn(Optional.of(sampleUser));
+        when(translationService.getDefaultLocale()).thenReturn(Locale.of("pl"));
+        when(translationService.get(Locale.of("pl"), "moderation.ads.removedBecauseOfBan", "Spam w ogłoszeniach"))
+                .thenReturn("Konto autora zostało zablokowane. Powód: Spam w ogłoszeniach");
+        LocalDateTime before = LocalDateTime.now();
+
+        userService.banUser(1L, "  Spam w ogłoszeniach ", 48);
+
+        assertTrue(sampleUser.isBanned());
+        assertEquals("Spam w ogłoszeniach", sampleUser.getBanReason());
+        assertFalse(sampleUser.getBannedUntil().isBefore(before.plusHours(48)));
+        assertTrue(sampleUser.getBannedUntil().isBefore(before.plusHours(48).plusMinutes(1)));
+        verify(userRepository).save(sampleUser);
+        // All listings of the blocked user are removed, with the ban reason
+        verify(adService).removeAllAdsOfAuthor(1L, "Konto autora zostało zablokowane. Powód: Spam w ogłoszeniach");
+    }
+
+    @Test
+    @DisplayName("Ban: moderators and administrators cannot be blocked")
+    void shouldNotBanStaff() {
+        User moderator = User.builder().id(2L).email("mod@wsb.pl").role(RoleEnum.MODERATOR).build();
+        User admin = User.builder().id(3L).email("admin@wsb.pl").role(RoleEnum.ADMIN).build();
+        when(userRepository.findById(2L)).thenReturn(Optional.of(moderator));
+        when(userRepository.findById(3L)).thenReturn(Optional.of(admin));
+
+        assertThrows(LocalizedException.class, () -> userService.banUser(2L, "Powód", 24));
+        assertThrows(LocalizedException.class, () -> userService.banUser(3L, "Powód", 24));
+        verify(userRepository, never()).save(any());
+        verifyNoInteractions(adService);
+    }
+
+    @Test
+    @DisplayName("Ban: a reason and a number of hours within the limit are required")
+    void shouldValidateBanInput() {
+        assertThrows(IllegalArgumentException.class, () -> userService.banUser(1L, " ", 24));
+        assertThrows(IllegalArgumentException.class, () -> userService.banUser(1L, "Powód", 0));
+        assertThrows(IllegalArgumentException.class, () -> userService.banUser(1L, "Powód", UserService.MAX_BAN_HOURS + 1));
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Unban: lifts the ban before it ends")
+    void shouldUnbanUser() {
+        sampleUser.setBannedUntil(LocalDateTime.now().plusDays(1));
+        sampleUser.setBanReason("Powód");
+        when(userRepository.findById(1L)).thenReturn(Optional.of(sampleUser));
+
+        userService.unbanUser(1L);
+
+        assertFalse(sampleUser.isBanned());
+        assertNull(sampleUser.getBanReason());
+        // Removal is final - unblocking does not bring the listings back
+        verifyNoInteractions(adService);
+    }
+
+    @Test
+    @DisplayName("Account state: an expired ban no longer blocks the account")
+    void shouldReportAccountState() {
+        when(userRepository.findByEmail("test@wsb.pl")).thenReturn(Optional.of(sampleUser));
+        when(userRepository.findByEmail("brak@wsb.pl")).thenReturn(Optional.empty());
+
+        sampleUser.setBannedUntil(LocalDateTime.now().plusHours(1));
+        assertEquals(AccountStateEnum.BANNED, userService.getAccountState("test@wsb.pl"));
+        assertTrue(userService.findActiveBan(" Test@WSB.pl ").isPresent());
+
+        sampleUser.setBannedUntil(LocalDateTime.now().minusMinutes(1));
+        assertEquals(AccountStateEnum.ACTIVE, userService.getAccountState("test@wsb.pl"));
+        assertTrue(userService.findActiveBan("test@wsb.pl").isEmpty());
+
+        assertEquals(AccountStateEnum.MISSING, userService.getAccountState("brak@wsb.pl"));
     }
 }

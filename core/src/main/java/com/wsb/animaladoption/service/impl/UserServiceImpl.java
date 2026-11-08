@@ -5,6 +5,7 @@ import com.wsb.animaladoption.dto.UserPasswordUpdateDto;
 import com.wsb.animaladoption.dto.UserProfileUpdateDto;
 import com.wsb.animaladoption.dto.UserRegistrationDto;
 import com.wsb.animaladoption.dto.VerificationResult;
+import com.wsb.animaladoption.enums.AccountStateEnum;
 import com.wsb.animaladoption.enums.RoleEnum;
 import com.wsb.animaladoption.enums.VerificationResultEnum;
 import com.wsb.animaladoption.event.EmailChangeEvent;
@@ -17,6 +18,7 @@ import com.wsb.animaladoption.model.VerificationToken;
 import com.wsb.animaladoption.repository.PasswordResetTokenRepository;
 import com.wsb.animaladoption.repository.UserRepository;
 import com.wsb.animaladoption.repository.VerificationTokenRepository;
+import com.wsb.animaladoption.service.AdService;
 import com.wsb.animaladoption.service.FileStorageService;
 import com.wsb.animaladoption.service.LoginAttemptService;
 import com.wsb.animaladoption.service.UserService;
@@ -50,6 +52,7 @@ public class UserServiceImpl implements UserService {
     private final TranslationService translationService;
     private final PasswordResetTokenRepository passwordResetTokenRepository;
     private final LoginAttemptService loginAttemptService;
+    private final AdService adService;
 
     /** Minimum time between two reset emails for one account - protects the mailbox from being flooded. */
     static final Duration PASSWORD_RESET_COOLDOWN = Duration.ofMinutes(2);
@@ -256,6 +259,59 @@ public class UserServiceImpl implements UserService {
     @Transactional
     public int deleteExpiredPasswordResetTokens() {
         return passwordResetTokenRepository.deleteExpired(LocalDateTime.now());
+    }
+
+    @Override
+    @Transactional
+    public void banUser(Long userId, String reason, int hours) {
+        if (reason == null || reason.isBlank()) {
+            throw new IllegalArgumentException("Powód blokady jest wymagany");
+        }
+        if (hours < 1 || hours > MAX_BAN_HOURS) {
+            throw new IllegalArgumentException("Nieprawidłowy czas blokady: " + hours);
+        }
+        User user = findById(userId);
+        // Staff accounts are managed outside the moderation panel - this also stops a moderator from blocking
+        // themselves or another moderator/administrator
+        if (user.isStaff()) {
+            throw new LocalizedException("moderation.users.ban.staff");
+        }
+        user.setBannedUntil(LocalDateTime.now().plusHours(hours));
+        user.setBanReason(reason.trim());
+        userRepository.save(user);
+
+        // All listings of a blocked user are removed, just as if a moderator removed each of them.
+        // The reason is saved in the default language, like the other texts written to the database.
+        // Removal is final - lifting the ban does not bring the listings back.
+        String removalReason = translationService.get(translationService.getDefaultLocale(),
+                "moderation.ads.removedBecauseOfBan", user.getBanReason());
+        adService.removeAllAdsOfAuthor(user.getId(), removalReason);
+    }
+
+    @Override
+    @Transactional
+    public void unbanUser(Long userId) {
+        User user = findById(userId);
+        user.setBannedUntil(null);
+        user.setBanReason(null);
+        userRepository.save(user);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<User> findActiveBan(String email) {
+        if (email == null) {
+            return Optional.empty();
+        }
+        return userRepository.findByEmail(email.trim().toLowerCase()).filter(User::isBanned);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public AccountStateEnum getAccountState(String email) {
+        return userRepository.findByEmail(email)
+                .map(user -> user.isBanned() ? AccountStateEnum.BANNED : AccountStateEnum.ACTIVE)
+                .orElse(AccountStateEnum.MISSING);
     }
 
     private Optional<PasswordResetToken> findValidResetToken(String token) {

@@ -54,6 +54,10 @@ public class Ad {
     @Column(length = 500)
     private String rejectionReason;
 
+    /** Reason given by the moderator when removing the listing (status REMOVED) - shown to the author. */
+    @Column(length = 500)
+    private String removalReason;
+
     @CreationTimestamp
     private LocalDateTime createdAt;
 

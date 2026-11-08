@@ -3,6 +3,7 @@ package com.wsb.animaladoption.controller;
 import com.wsb.animaladoption.dto.AdCreateDto;
 import com.wsb.animaladoption.dto.AdSearchCriteria;
 import com.wsb.animaladoption.dto.AdoptionFormDto;
+import com.wsb.animaladoption.enums.AdStatusEnum;
 import com.wsb.animaladoption.enums.AnimalAgeEnum;
 import com.wsb.animaladoption.enums.AnimalSexEnum;
 import com.wsb.animaladoption.enums.AnimalSizeEnum;
@@ -14,7 +15,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
-import org.springframework.security.core.GrantedAuthority;
+import com.wsb.animaladoption.security.StaffRoles;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Controller;
@@ -79,19 +80,20 @@ public class AdController {
         Ad ad = adService.findById(id);
 
         String viewerEmail = currentUser != null ? currentUser.getUsername() : null;
-        if (!adService.canView(ad, viewerEmail, isModerator(currentUser))) {
+        boolean viewerIsModerator = isModerator(currentUser);
+        if (!adService.canView(ad, viewerEmail, viewerIsModerator)) {
             // 404 instead of 403, so a stranger cannot even tell that a hidden listing with this id exists
             throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         }
 
         model.addAttribute("ad", ad);
+        // Moderators and administrators see the "remove listing" form in the window
+        model.addAttribute("viewerIsModerator", viewerIsModerator);
         return "ads/fragments/ad-modal :: content";
     }
 
     private static boolean isModerator(UserDetails user) {
-        return user != null && user.getAuthorities().stream()
-                .map(GrantedAuthority::getAuthority)
-                .anyMatch(role -> role.equals("ROLE_MODERATOR") || role.equals("ROLE_ADMIN"));
+        return user != null && StaffRoles.isStaff(user.getAuthorities());
     }
 
     @GetMapping("/new")
@@ -127,7 +129,8 @@ public class AdController {
     public String showEditForm(@PathVariable Long id, Model model, @AuthenticationPrincipal UserDetails currentUser) {
         Ad ad = adService.findById(id);
 
-        if (!ad.getAuthor().getEmail().equals(currentUser.getUsername())) {
+        // Someone else's listing, or one removed by a moderator (it cannot be edited any more)
+        if (!ad.getAuthor().getEmail().equals(currentUser.getUsername()) || ad.getStatus() == AdStatusEnum.REMOVED) {
             return "redirect:/my-ads";
         }
 

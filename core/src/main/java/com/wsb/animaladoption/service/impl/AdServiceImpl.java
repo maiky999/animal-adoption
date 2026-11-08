@@ -6,7 +6,7 @@ import com.wsb.animaladoption.dto.AdSearchCriteria;
 import com.wsb.animaladoption.dto.AdoptionFormDto;
 import com.wsb.animaladoption.enums.AdStatusEnum;
 import com.wsb.animaladoption.enums.UserTypeEnum;
-import com.wsb.animaladoption.event.AdRejectedEvent;
+import com.wsb.animaladoption.event.AdModerationEvent;
 import com.wsb.animaladoption.event.AdoptionFormEvent;
 import com.wsb.animaladoption.exception.LocalizedException;
 import com.wsb.animaladoption.model.Ad;
@@ -110,7 +110,8 @@ public class AdServiceImpl implements AdService {
         // Without this check the author could send status=ACTIVE in a hand-crafted request
         // and publish a pending or rejected listing, skipping moderation
         boolean allowed = switch (newStatus) {
-            case ARCHIVED -> ad.getStatus() != AdStatusEnum.ADOPTED && ad.getStatus() != AdStatusEnum.ARCHIVED;
+            case ARCHIVED -> ad.getStatus() == AdStatusEnum.ACTIVE || ad.getStatus() == AdStatusEnum.PENDING
+                    || ad.getStatus() == AdStatusEnum.REJECTED;
             case ADOPTED -> ad.getStatus() == AdStatusEnum.ACTIVE;
             default -> false;
         };
@@ -142,14 +143,54 @@ public class AdServiceImpl implements AdService {
         ad.setRejectionReason(reason.trim());
         adRepository.save(ad);
 
-        AdRejectedEvent event = new AdRejectedEvent(
+        notifyAuthor(ad, AdModerationEvent.Action.REJECTED, ad.getRejectionReason());
+    }
+
+    @Override
+    public long countPendingAds() {
+        return adRepository.countByStatus(AdStatusEnum.PENDING);
+    }
+
+    @Override
+    @Transactional
+    public void removeAd(Long adId, String reason) {
+        if (reason == null || reason.isBlank()) {
+            throw new IllegalArgumentException("Powód usunięcia jest wymagany");
+        }
+        Ad ad = findById(adId);
+        if (ad.getStatus() == AdStatusEnum.REMOVED) {
+            throw new LocalizedException("moderation.ads.remove.alreadyRemoved");
+        }
+        ad.setStatus(AdStatusEnum.REMOVED);
+        ad.setRemovalReason(reason.trim());
+        adRepository.save(ad);
+
+        notifyAuthor(ad, AdModerationEvent.Action.REMOVED, ad.getRemovalReason());
+    }
+
+    @Override
+    @Transactional
+    public int removeAllAdsOfAuthor(Long authorId, String reason) {
+        List<Ad> ads = adRepository.findAllByAuthorIdAndStatusNot(authorId, AdStatusEnum.REMOVED);
+        for (Ad ad : ads) {
+            ad.setStatus(AdStatusEnum.REMOVED);
+            ad.setRemovalReason(reason);
+        }
+        adRepository.saveAll(ads);
+        return ads.size();
+    }
+
+    /** Emails the author what the moderator did with their listing and why (asynchronously, via the queue). */
+    private void notifyAuthor(Ad ad, AdModerationEvent.Action action, String reason) {
+        AdModerationEvent event = new AdModerationEvent(
+                action,
                 ad.getAuthor().getEmail(),
                 ad.getAuthor().getDisplayName(),
                 ad.getTitle(),
-                ad.getRejectionReason(),
+                reason,
                 // We don't know which language the author uses - the email is sent in the default language
                 translationService.getDefaultLocale().toLanguageTag());
-        rabbitTemplate.convertAndSend(RabbitMQConfig.EXCHANGE_EMAIL, RabbitMQConfig.ROUTING_KEY_AD_REJECTED, event);
+        rabbitTemplate.convertAndSend(RabbitMQConfig.EXCHANGE_EMAIL, RabbitMQConfig.ROUTING_KEY_AD_MODERATION, event);
     }
 
     @Override
@@ -181,6 +222,10 @@ public class AdServiceImpl implements AdService {
 
         if (!ad.getAuthor().getEmail().equals(authorEmail)) {
             throw new SecurityException("Brak uprawnień do edycji tego ogłoszenia");
+        }
+        // Editing sends the listing back to moderation - a removed listing must not come back this way
+        if (ad.getStatus() == AdStatusEnum.REMOVED) {
+            throw new LocalizedException("ads.removed.cannotEdit");
         }
 
         ad.setTitle(dto.getTitle());

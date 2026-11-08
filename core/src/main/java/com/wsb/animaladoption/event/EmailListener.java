@@ -112,22 +112,26 @@ public class EmailListener {
         }
     }
 
-    @RabbitListener(queues = RabbitMQConfig.QUEUE_AD_REJECTED)
-    public void handleAdRejectedEmail(AdRejectedEvent event) {
-        log.info("Rozpoczynam wysyłkę informacji o odrzuceniu ogłoszenia do: {}", event.getAuthorEmail());
+    @RabbitListener(queues = RabbitMQConfig.QUEUE_AD_MODERATION)
+    public void handleAdModerationEmail(AdModerationEvent event) {
+        log.info("Rozpoczynam wysyłkę informacji o moderacji ogłoszenia ({}) do: {}", event.getAction(), event.getAuthorEmail());
         try {
             Locale locale = resolveLocale(event.getLanguageTag());
+            // The same arguments, different texts (full key names, so TranslationKeysUsageTest can check them)
+            boolean removed = event.getAction() == AdModerationEvent.Action.REMOVED;
+            String subjectKey = removed ? "email.adRemoved.subject" : "email.adRejected.subject";
+            String bodyKey = removed ? "email.adRemoved.body" : "email.adRejected.body";
 
             SimpleMailMessage message = new SimpleMailMessage();
             message.setTo(event.getAuthorEmail());
-            message.setSubject(translationService.get(locale, "email.adRejected.subject", event.getAdTitle()));
-            message.setText(translationService.get(locale, "email.adRejected.body",
+            message.setSubject(translationService.get(locale, subjectKey, event.getAdTitle()));
+            message.setText(translationService.get(locale, bodyKey,
                     event.getAuthorName(), event.getAdTitle(), event.getReason(), baseUrl + "/my-ads"));
 
             mailSender.send(message);
-            log.info("Wysłano informację o odrzuceniu ogłoszenia do: {}", event.getAuthorEmail());
+            log.info("Wysłano informację o moderacji ogłoszenia do: {}", event.getAuthorEmail());
         } catch (Exception e) {
-            log.error("Błąd podczas wysyłania informacji o odrzuceniu ogłoszenia do: {}", event.getAuthorEmail(), e);
+            log.error("Błąd podczas wysyłania informacji o moderacji ogłoszenia do: {}", event.getAuthorEmail(), e);
         }
     }
 

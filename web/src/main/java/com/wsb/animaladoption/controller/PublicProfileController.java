@@ -28,6 +28,8 @@ public class PublicProfileController {
 
         model.addAttribute("profileUser", user);
         model.addAttribute("ads", activeAds);
+        // Upper limit of the "ban for N hours" field in the moderation panel
+        model.addAttribute("maxBanHours", UserService.MAX_BAN_HOURS);
 
         return "user/public-profile";
     }

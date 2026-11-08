@@ -5,6 +5,7 @@ import com.wsb.animaladoption.dto.PasswordResetDto;
 import com.wsb.animaladoption.dto.UserRegistrationDto;
 import com.wsb.animaladoption.dto.VerificationResult;
 import com.wsb.animaladoption.security.AltchaService;
+import com.wsb.animaladoption.security.BanNotice;
 import com.wsb.animaladoption.security.RegistrationBotGuard;
 import com.wsb.animaladoption.service.UserService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -34,7 +35,13 @@ public class AuthController {
     private final RegistrationBotGuard botGuard;
 
     @GetMapping("/login")
-    public String showLoginForm() {
+    public String showLoginForm(HttpSession session, Model model) {
+        // Ban details left by LoginFailureHandler or StaleSessionInterceptor - shown once, then removed
+        Object banNotice = session.getAttribute(BanNotice.SESSION_ATTRIBUTE);
+        if (banNotice != null) {
+            model.addAttribute("banNotice", banNotice);
+            session.removeAttribute(BanNotice.SESSION_ATTRIBUTE);
+        }
         return "user/login";
     }
 

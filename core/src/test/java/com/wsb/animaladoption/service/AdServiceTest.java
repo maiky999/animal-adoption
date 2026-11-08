@@ -8,7 +8,7 @@ import com.wsb.animaladoption.dto.AdoptionFormDto;
 import com.wsb.animaladoption.enums.AdStatusEnum;
 import com.wsb.animaladoption.enums.AnimalAgeEnum;
 import com.wsb.animaladoption.enums.AnimalSexEnum;
-import com.wsb.animaladoption.event.AdRejectedEvent;
+import com.wsb.animaladoption.event.AdModerationEvent;
 import com.wsb.animaladoption.event.AdoptionFormEvent;
 import com.wsb.animaladoption.model.Ad;
 import com.wsb.animaladoption.model.Category;
@@ -197,12 +197,13 @@ class AdServiceTest {
         assertEquals(AdStatusEnum.REJECTED, sampleAd.getStatus());
         assertEquals("Zdjęcia nie przedstawiają zwierzęcia", sampleAd.getRejectionReason());
 
-        ArgumentCaptor<AdRejectedEvent> captor = ArgumentCaptor.forClass(AdRejectedEvent.class);
+        ArgumentCaptor<AdModerationEvent> captor = ArgumentCaptor.forClass(AdModerationEvent.class);
         verify(rabbitTemplate).convertAndSend(eq(RabbitMQConfig.EXCHANGE_EMAIL),
-                eq(RabbitMQConfig.ROUTING_KEY_AD_REJECTED), captor.capture());
+                eq(RabbitMQConfig.ROUTING_KEY_AD_MODERATION), captor.capture());
         assertEquals("autor@example.com", captor.getValue().getAuthorEmail());
         assertEquals("Piesek szuka domu", captor.getValue().getAdTitle());
         assertEquals("Zdjęcia nie przedstawiają zwierzęcia", captor.getValue().getReason());
+        assertEquals(AdModerationEvent.Action.REJECTED, captor.getValue().getAction());
     }
 
     @Test
@@ -211,6 +212,91 @@ class AdServiceTest {
         assertThrows(IllegalArgumentException.class, () -> adService.rejectAd(10L, "   "));
         verify(adRepository, never()).save(any());
         verifyNoInteractions(rabbitTemplate);
+    }
+
+    // --- Removing listings by a moderator ---
+
+    @Test
+    @DisplayName("Removing a published listing hides it, saves the reason and emails the author")
+    void shouldRemoveActiveAdAndNotifyAuthor() {
+        when(adRepository.findById(10L)).thenReturn(Optional.of(sampleAd));
+        when(translationService.getDefaultLocale()).thenReturn(Locale.of("pl"));
+
+        adService.removeAd(10L, " Sprzedaż zwierzęcia ");
+
+        assertEquals(AdStatusEnum.REMOVED, sampleAd.getStatus());
+        assertEquals("Sprzedaż zwierzęcia", sampleAd.getRemovalReason());
+        verify(adRepository).save(sampleAd);
+
+        ArgumentCaptor<AdModerationEvent> captor = ArgumentCaptor.forClass(AdModerationEvent.class);
+        verify(rabbitTemplate).convertAndSend(eq(RabbitMQConfig.EXCHANGE_EMAIL),
+                eq(RabbitMQConfig.ROUTING_KEY_AD_MODERATION), captor.capture());
+        assertEquals(AdModerationEvent.Action.REMOVED, captor.getValue().getAction());
+        assertEquals("Sprzedaż zwierzęcia", captor.getValue().getReason());
+    }
+
+    @Test
+    @DisplayName("Removing without a reason or a second time is not possible")
+    void shouldNotRemoveWithoutReasonOrTwice() {
+        assertThrows(IllegalArgumentException.class, () -> adService.removeAd(10L, " "));
+
+        sampleAd.setStatus(AdStatusEnum.REMOVED);
+        when(adRepository.findById(10L)).thenReturn(Optional.of(sampleAd));
+        assertThrows(LocalizedException.class, () -> adService.removeAd(10L, "Powód"));
+
+        verify(adRepository, never()).save(any());
+        verifyNoInteractions(rabbitTemplate);
+    }
+
+    @Test
+    @DisplayName("The author cannot bring a removed listing back by editing it (that would send it to moderation again)")
+    void shouldNotEditRemovedAd() {
+        sampleAd.setStatus(AdStatusEnum.REMOVED);
+        when(adRepository.findById(10L)).thenReturn(Optional.of(sampleAd));
+
+        AdCreateDto dto = new AdCreateDto();
+        dto.setTitle("Nowy tytuł ogłoszenia");
+
+        assertThrows(LocalizedException.class, () -> adService.updateAd(10L, dto, "autor@example.com"));
+        assertEquals(AdStatusEnum.REMOVED, sampleAd.getStatus());
+        verify(adRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("The author cannot close a removed listing either")
+    void shouldNotArchiveRemovedAd() {
+        sampleAd.setStatus(AdStatusEnum.REMOVED);
+        when(adRepository.findById(10L)).thenReturn(Optional.of(sampleAd));
+
+        assertThrows(IllegalArgumentException.class, () ->
+                adService.changeAdStatus(10L, AdStatusEnum.ARCHIVED, "autor@example.com"));
+    }
+
+    @Test
+    @DisplayName("Blocking an account removes all of its listings that are not removed yet, without emails")
+    void shouldRemoveAllAdsOfAuthor() {
+        Ad pending = Ad.builder().id(11L).author(sampleUser).status(AdStatusEnum.PENDING).build();
+        Ad adopted = Ad.builder().id(12L).author(sampleUser).status(AdStatusEnum.ADOPTED).build();
+        when(adRepository.findAllByAuthorIdAndStatusNot(1L, AdStatusEnum.REMOVED))
+                .thenReturn(List.of(sampleAd, pending, adopted));
+
+        int removed = adService.removeAllAdsOfAuthor(1L, "Konto zablokowane");
+
+        assertEquals(3, removed);
+        for (Ad ad : List.of(sampleAd, pending, adopted)) {
+            assertEquals(AdStatusEnum.REMOVED, ad.getStatus());
+            assertEquals("Konto zablokowane", ad.getRemovalReason());
+        }
+        verify(adRepository).saveAll(List.of(sampleAd, pending, adopted));
+        verifyNoInteractions(rabbitTemplate);
+    }
+
+    @Test
+    @DisplayName("Counts listings waiting for moderation")
+    void shouldCountPendingAds() {
+        when(adRepository.countByStatus(AdStatusEnum.PENDING)).thenReturn(3L);
+
+        assertEquals(3L, adService.countPendingAds());
     }
 
     @Test

@@ -15,6 +15,12 @@ import java.util.List;
 @Repository
 public interface AdRepository extends JpaRepository<Ad, Long>, JpaSpecificationExecutor<Ad> {
     List<Ad> findAllByStatusOrderByCreatedAtDesc(AdStatusEnum adStatusEnum);
+
+    /** All listings of the author except those with the given status (e.g. not removed yet - when blocking the account). */
+    List<Ad> findAllByAuthorIdAndStatusNot(Long authorId, AdStatusEnum status);
+
+    /** Number of listings with the status - e.g. how many wait for moderation (badge in the navigation). */
+    long countByStatus(AdStatusEnum status);
     List<Ad> findAllByCategoryIdAndStatusOrderByCreatedAtDesc(Long categoryId, AdStatusEnum adStatusEnum);
     List<Ad> findAllByAuthorEmailOrderByCreatedAtDesc(String email);
 

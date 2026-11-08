@@ -55,7 +55,8 @@ class PageRenderingI18nTest {
     private static final String RESET_TOKEN = "test-reset-token";
 
     /** HTMX fragments - rendered without the page layout. */
-    private static final Set<String> FRAGMENTS = Set.of("/ads/{adId}", "/messages/{adId}/{otherUserId}/new?after=0");
+    private static final Set<String> FRAGMENTS = Set.of("/ads/{adId}", "/messages/{adId}/{otherUserId}/new?after=0",
+            "/moderation/pending-badge");
 
     @MockitoBean
     private ConnectionFactory connectionFactory;
@@ -136,6 +137,13 @@ class PageRenderingI18nTest {
                 Arguments.of("/messages/{adId}/{otherUserId}", true, "Dotyczy ogłoszenia:", "Regarding listing:"),
                 Arguments.of("/moderation/ads", true, "Panel Moderatora", "Moderator Panel"),
                 Arguments.of("/moderation/ads", true, "Wcześniej odrzucone z powodu:", "Previously rejected because:"),
+                Arguments.of("/moderation/pending-badge", true,
+                        "Ogłoszenia czekające na akceptację: 1", "Listings waiting for approval: 1"),
+                Arguments.of("/ads/{adId}", true, "Usuń ogłoszenie (moderacja)", "Remove listing (moderation)"),
+                Arguments.of("/users/{otherUserId}", true, "Moderacja konta", "Account moderation"),
+                // The author's own profile: a moderator account cannot be blocked
+                Arguments.of("/users/{authorId}", true,
+                        "Konta moderatorów i administratorów nie mogą", "Moderator and administrator accounts cannot"),
                 Arguments.of("/moderation/articles/new", true, "Panel Edukatora", "Educator Panel")
         );
     }

@@ -22,8 +22,8 @@ public class RabbitMQConfig {
     public static final String QUEUE_PASSWORD_RESET = "queue.email.password_reset";
     public static final String ROUTING_KEY_PASSWORD_RESET = "routing.key.password_reset";
 
-    public static final String QUEUE_AD_REJECTED = "queue.email.ad_rejected";
-    public static final String ROUTING_KEY_AD_REJECTED = "routing.key.ad_rejected";
+    public static final String QUEUE_AD_MODERATION = "queue.email.ad_moderation";
+    public static final String ROUTING_KEY_AD_MODERATION = "routing.key.ad_moderation";
 
     // Chat messages are not sent through the queue - they are saved synchronously (see MessageServiceImpl.sendMessage),
     // so the sender sees their message immediately. The queue is used for emails, where waiting for SMTP
@@ -75,13 +75,13 @@ public class RabbitMQConfig {
     }
 
     @Bean
-    public Queue adRejectedQueue() {
-        return new Queue(QUEUE_AD_REJECTED, true);
+    public Queue adModerationQueue() {
+        return new Queue(QUEUE_AD_MODERATION, true);
     }
 
     @Bean
-    public Binding bindingAdRejected(Queue adRejectedQueue, TopicExchange emailExchange) {
-        return BindingBuilder.bind(adRejectedQueue).to(emailExchange).with(ROUTING_KEY_AD_REJECTED);
+    public Binding bindingAdModeration(Queue adModerationQueue, TopicExchange emailExchange) {
+        return BindingBuilder.bind(adModerationQueue).to(emailExchange).with(ROUTING_KEY_AD_MODERATION);
     }
 
     @Bean

@@ -62,6 +62,9 @@
                 <div th:if="${ad.status.name() == 'ARCHIVED'}" class="absolute top-3 right-3 bg-gray-500 text-white px-3 py-1 rounded-md text-xs font-bold shadow-sm flex items-center z-20">
                     <i class="ph-fill ph-archive mr-1"></i> [[#{adStatus.ARCHIVED}]]
                 </div>
+                <div th:if="${ad.status.name() == 'REMOVED'}" class="absolute top-3 right-3 bg-gray-800 text-white px-3 py-1 rounded-md text-xs font-bold shadow-sm flex items-center z-20">
+                    <i class="ph-fill ph-trash mr-1"></i> [[#{adStatus.REMOVED}]]
+                </div>
             </div>
 
             <div class="p-5 flex-grow flex flex-col">
@@ -118,7 +121,19 @@
                     </div>
                 </div>
 
-                <div class="mt-auto pt-4 border-t border-gray-100 text-center" th:if="${ad.status.name() == 'ADOPTED' or ad.status.name() == 'ARCHIVED'}">
+                <!-- Removed by a moderator - final, the listing can no longer be edited -->
+                <div th:if="${ad.status.name() == 'REMOVED'}" class="bg-gray-100 text-gray-700 p-2 rounded-lg text-xs font-medium mb-3 flex items-start">
+                    <i class="ph-fill ph-trash mr-1 mt-0.5 text-base flex-shrink-0"></i>
+                    <div>
+                        <p>[[#{myAds.removed.info}]]</p>
+                        <p th:if="${ad.removalReason != null}" class="mt-1">
+                            <strong>[[#{myAds.rejected.reason}]]</strong>
+                            <span class="whitespace-pre-wrap" th:text="${ad.removalReason}">Powód</span>
+                        </p>
+                    </div>
+                </div>
+
+                <div class="mt-auto pt-4 border-t border-gray-100 text-center" th:if="${ad.status.name() == 'ADOPTED' or ad.status.name() == 'ARCHIVED' or ad.status.name() == 'REMOVED'}">
                     <span class="text-sm text-gray-500 font-medium">[[#{myAds.inactive}]]</span>
                 </div>
 

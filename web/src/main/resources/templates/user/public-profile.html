@@ -1,5 +1,6 @@
 <!DOCTYPE html>
-<html lang="pl" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout/base :: layout(~{::main})}">
+<html lang="pl" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/base :: layout(~{::main})}">
 <body>
 <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 w-full flex-grow relative">
 
@@ -57,6 +58,54 @@
             <span class="text-xs font-bold text-gray-600 uppercase tracking-wider">[[#{publicProfile.activeAds.line1}]]<br>[[#{publicProfile.activeAds.line2}]]</span>
         </div>
     </div>
+
+    <!-- MODERATION PANEL: blocking the account (visible only to moderators and administrators) -->
+    <section sec:authorize="hasAnyRole('MODERATOR', 'ADMIN')" class="bg-white rounded-3xl p-6 md:p-8 shadow-sm border border-red-200 mb-10">
+        <h3 class="text-xl font-bold text-gray-800 flex items-center mb-4">
+            <i class="ph-fill ph-shield-check text-red-500 text-2xl mr-2"></i> [[#{moderation.users.title}]]
+        </h3>
+
+        <!-- Moderator and administrator accounts cannot be blocked from here -->
+        <p th:if="${profileUser.staff}" class="text-sm text-gray-500">[[#{moderation.users.staff}]]</p>
+
+        <th:block th:unless="${profileUser.staff}">
+            <!-- Current ban -->
+            <div th:if="${profileUser.banned}" class="bg-red-50 border border-red-200 text-red-700 p-4 rounded-xl text-sm mb-5 flex flex-col sm:flex-row sm:items-center gap-3">
+                <div class="flex-grow">
+                    <p class="font-bold" th:text="#{moderation.users.bannedUntil(${#temporals.format(profileUser.bannedUntil, 'dd.MM.yyyy HH:mm')})}">Konto zablokowane do ...</p>
+                    <p class="mt-1"><strong>[[#{login.banned.reason}]]</strong> <span class="whitespace-pre-wrap" th:text="${profileUser.banReason}">Powód</span></p>
+                </div>
+                <form th:action="@{/moderation/users/{id}/unban(id=${profileUser.id})}" method="post">
+                    <button type="submit" class="bg-white border border-red-300 hover:bg-red-100 text-red-700 px-4 py-2 rounded-xl font-bold transition whitespace-nowrap">
+                        <i class="ph-bold ph-lock-open mr-1"></i> [[#{moderation.users.unban}]]
+                    </button>
+                </form>
+            </div>
+
+            <!-- Blocking (or changing the current ban - a new ban replaces the previous one) -->
+            <form th:action="@{/moderation/users/{id}/ban(id=${profileUser.id})}" method="post" class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                <div class="md:col-span-3">
+                    <label for="ban-reason" class="block text-xs font-bold text-gray-700 mb-1">[[#{moderation.users.ban.reason}]]</label>
+                    <textarea id="ban-reason" name="reason" rows="2" required maxlength="500"
+                              th:placeholder="#{moderation.users.ban.reason.placeholder}"
+                              class="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm focus:ring-2 focus:ring-red-400 focus:border-red-400 outline-none resize-none"></textarea>
+                </div>
+                <div>
+                    <label for="ban-hours" class="block text-xs font-bold text-gray-700 mb-1">[[#{moderation.users.ban.hours}]]</label>
+                    <input id="ban-hours" type="number" name="hours" value="24" min="1" required
+                           th:attr="max=${maxBanHours}"
+                           class="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm focus:ring-2 focus:ring-red-400 focus:border-red-400 outline-none">
+                </div>
+                <div class="md:col-span-4 flex flex-col sm:flex-row sm:items-center gap-3">
+                    <p class="text-xs text-gray-500 flex-grow">[[#{moderation.users.ban.hint}]]</p>
+                    <button type="submit" class="bg-red-600 hover:bg-red-700 text-white px-5 py-2 rounded-xl font-bold transition whitespace-nowrap">
+                        <i class="ph-bold ph-prohibit mr-1"></i>
+                        <span th:text="${profileUser.banned} ? #{moderation.users.ban.change} : #{moderation.users.ban.submit}">Zablokuj konto</span>
+                    </button>
+                </div>
+            </form>
+        </th:block>
+    </section>
 
     <div id="ads-section" class="mb-8 border-b border-gray-200 pb-5 pt-4">
         <h3 class="text-2xl font-bold text-gray-800">[[#{publicProfile.ads.title}]]</h3>

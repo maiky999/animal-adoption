@@ -4,7 +4,10 @@ import com.wsb.animaladoption.dto.UserPasswordUpdateDto;
 import com.wsb.animaladoption.dto.UserProfileUpdateDto;
 import com.wsb.animaladoption.dto.UserRegistrationDto;
 import com.wsb.animaladoption.dto.VerificationResult;
+import com.wsb.animaladoption.enums.AccountStateEnum;
 import com.wsb.animaladoption.model.User;
+
+import java.util.Optional;
 
 /**
  * Business logic for user accounts: registration, email verification and profile management.
@@ -75,6 +78,29 @@ public interface UserService {
 
     /** Deletes unused password reset links that have already expired. */
     int deleteExpiredPasswordResetTokens();
+
+    // --- Blocking accounts (moderation) ---
+
+    /** The longest possible ban: 10 years, i.e. in practice a permanent one. */
+    int MAX_BAN_HOURS = 10 * 365 * 24;
+
+    /**
+     * Blocks the account for the given number of hours. A blocked user cannot log in, and a session
+     * they already have is ended on their next request. Blocking again replaces the previous ban.
+     *
+     * @throws IllegalArgumentException if the reason is empty or the number of hours is outside 1..{@link #MAX_BAN_HOURS}
+     * @throws com.wsb.animaladoption.exception.LocalizedException if the account belongs to a moderator or an administrator
+     */
+    void banUser(Long userId, String reason, int hours);
+
+    /** Lifts the ban before it ends. */
+    void unbanUser(Long userId);
+
+    /** The user with the given email, if their account is blocked right now (with the reason and end time). */
+    Optional<User> findActiveBan(String email);
+
+    /** Whether the account behind a session still exists and is not blocked - one database query. */
+    AccountStateEnum getAccountState(String email);
 
     /**
      * Deletes accounts whose email was never confirmed and whose activation link has already expired.

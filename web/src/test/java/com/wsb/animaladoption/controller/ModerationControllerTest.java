@@ -9,12 +9,14 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.util.Collections;
 import java.util.List;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
@@ -81,6 +83,45 @@ class ModerationControllerTest {
                 .andExpect(flash().attribute("errorMessage", "moderation.ads.reject.reasonInvalid"));
 
         verify(adService, never()).rejectAd(anyLong(), anyString());
+    }
+
+    @Test
+    @DisplayName("POST /moderation/ads/{id}/remove - removes the listing and goes back to the page it was removed from")
+    void shouldRemoveAdAndGoBack() throws Exception {
+        mockMvc.perform(post("/moderation/ads/10/remove")
+                        .param("reason", "Sprzedaż zwierzęcia")
+                        .header("Referer", "http://localhost:8080/ads?q=burek&page=2"))
+                .andExpect(redirectedUrl("/ads?q=burek&page=2"))
+                .andExpect(flash().attribute("moderationMessage", "moderation.ads.remove.success"));
+
+        verify(adService).removeAd(10L, "Sprzedaż zwierzęcia");
+    }
+
+    @Test
+    @DisplayName("POST /moderation/ads/{id}/remove - without a reason nothing is removed")
+    void shouldNotRemoveWithoutReason() throws Exception {
+        mockMvc.perform(post("/moderation/ads/10/remove").param("reason", ""))
+                .andExpect(redirectedUrl("/ads"))
+                .andExpect(flash().attribute("moderationError", "moderation.ads.remove.reasonInvalid"));
+
+        verify(adService, never()).removeAd(anyLong(), anyString());
+    }
+
+    @Test
+    @DisplayName("previousPage - only the path of the Referer is used, so a forged header cannot lead to another site")
+    void shouldNeverRedirectToAnotherHost() {
+        assertThat(ModerationController.previousPage(withReferer("https://evil.example.com/phishing"))).isEqualTo("/phishing");
+        assertThat(ModerationController.previousPage(withReferer("//evil.example.com"))).isEqualTo("/ads");
+        assertThat(ModerationController.previousPage(withReferer(null))).isEqualTo("/ads");
+        assertThat(ModerationController.previousPage(withReferer("not a uri ::"))).isEqualTo("/ads");
+    }
+
+    private static MockHttpServletRequest withReferer(String referer) {
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        if (referer != null) {
+            request.addHeader("Referer", referer);
+        }
+        return request;
     }
 
     @Test

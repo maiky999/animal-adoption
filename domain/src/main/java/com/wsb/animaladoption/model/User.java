@@ -57,5 +57,23 @@ public class User {
     @CreationTimestamp
     private LocalDateTime createdAt;
 
+    /**
+     * Account blocked by a moderator until this moment (null - not blocked). A ban always has an end,
+     * so there is no separate "unblock" job - after this time the account simply works again.
+     */
+    private LocalDateTime bannedUntil;
 
+    /** Reason of the ban, shown to the user when they try to log in. */
+    @Column(length = 500)
+    private String banReason;
+
+    /** Whether the account is blocked right now. */
+    public boolean isBanned() {
+        return bannedUntil != null && bannedUntil.isAfter(LocalDateTime.now());
+    }
+
+    /** Moderators and administrators - accounts that cannot be blocked from the moderation panel. */
+    public boolean isStaff() {
+        return role == RoleEnum.MODERATOR || role == RoleEnum.ADMIN;
+    }
 }

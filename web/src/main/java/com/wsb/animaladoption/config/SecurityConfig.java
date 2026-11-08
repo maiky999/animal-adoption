@@ -1,7 +1,9 @@
 package com.wsb.animaladoption.config;
 
+import com.wsb.animaladoption.security.LoginFailureHandler;
 import com.wsb.animaladoption.security.RateLimitFilter;
 import com.wsb.animaladoption.security.RateLimiter;
+import com.wsb.animaladoption.security.StaffRoles;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Bean;
@@ -59,10 +61,11 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http, TokenBasedRememberMeServices rememberMeServices,
-                                           RateLimiter rateLimiter) throws Exception {
+                                           RateLimiter rateLimiter, LoginFailureHandler loginFailureHandler) throws Exception {
         http
                 .authorizeHttpRequests(authorize -> authorize
-                        .requestMatchers("/moderation/**").hasAnyRole("MODERATOR", "ADMIN")
+                        // Moderation (listings, articles, blocking accounts) - for moderators and administrators
+                        .requestMatchers("/moderation/**").hasAnyRole(StaffRoles.NAMES)
                         // Adding and editing listings requires login, even though the rest of /ads/** is public
                         .requestMatchers("/ads/new", "/ads/*/edit").authenticated()
                         .requestMatchers(getWhitelist()).permitAll()
@@ -70,6 +73,8 @@ public class SecurityConfig {
                 ).formLogin(form -> form
                         .loginPage("/login")
                         .defaultSuccessUrl("/", true)
+                        // A blocked account sees the reason of the ban instead of "wrong password"
+                        .failureHandler(loginFailureHandler)
                         .permitAll()
                 ).logout(logout -> logout
                         .logoutSuccessUrl("/?logout")
