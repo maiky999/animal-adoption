@@ -100,8 +100,14 @@ if [[ -n "$domain" ]]; then
 fi
 
 # ---------- 6. Cleanup ----------
-# Every build leaves the previous application image without a name - remove them, so they do not fill the disk
+# Every build leaves the previous application image without a name, and the build cache (compiled classes,
+# Maven dependencies) grows with every build - remove what is no longer needed, so they do not fill the disk.
+# The cache from the last 3 days stays, so the next build is still fast.
 docker image prune -f >/dev/null
+docker builder prune -f --filter until=72h >/dev/null
+
+step "Miejsce na dysku"
+df -h / | tail -1 | awk '{print "zajęte " $3 " z " $2 " (" $5 "), wolne " $4}'
 
 ok "
 Gotowe. Wersja: $(git --no-pager log -1 --format='%h %s')"

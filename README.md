@@ -137,6 +137,25 @@ hasło `DB_PASSWORD` z `.env` na serwerze, baza `animaladoption`, opcja „Trust
 Szybciej, bez tunelu, prosto na serwerze:
 `docker compose -f docker-compose.prod.yml exec mssql /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -C -d animaladoption`.
 
+**Kopie zapasowe.** `bash backup.sh` zapisuje w katalogu `backups/` pełną kopię bazy (`db_<data>.bak.gz`)
+i przesłanych zdjęć (`uploads_<data>.tar.gz`). Zostaje 7 najnowszych kopii bazy i 3 kopie zdjęć
+(zmienne `BACKUP_KEEP`, `BACKUP_KEEP_UPLOADS`). Archiwum zdjęć jest tak duże jak wszystkie zdjęcia razem, więc
+mniej kopii wystarczy. Gdy na dysku zostaje mniej niż 2 GB, skrypt nie robi kopii i kończy się błędem.
+Codzienna kopia o 3:00: `crontab -e` i dopisać linię
+
+```
+0 3 * * * bash /home/azureuser/lapka/backup.sh >> /home/azureuser/lapka/backups/backup.log 2>&1
+```
+
+Kopia na tym samym serwerze nie chroni przed jego utratą, dlatego warto co jakiś czas pobrać ją na swój komputer:
+`scp -r azureuser@<DOMAIN>:lapka/backups .`. Kopie zawierają dane osobowe, więc trzymaj je w bezpiecznym miejscu.
+
+Odtworzenie (zastępuje bieżące dane, aplikacja jest na ten czas zatrzymana, skrypt prosi o potwierdzenie):
+
+```bash
+bash restore.sh backups/db_<data>.bak.gz backups/uploads_<data>.tar.gz
+```
+
 **Ważne:** przechowuj kopię `CRYPTO_KEY` poza serwerem. Bez niego zaszyfrowanych danych w bazie
 (telefony, wiadomości czatu) nie da się odczytać.
 

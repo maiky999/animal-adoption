@@ -43,7 +43,10 @@ services:
       start_period: 90s
     logging: *logging
 
-  # One-off container: creates the database if it does not exist yet, then exits
+  # One-off container: creates the database if it does not exist yet, then exits.
+  # RECOVERY SIMPLE: SQL Server creates databases in FULL recovery mode by default, where the transaction log
+  # keeps growing until a separate log backup is made. We make only full backups (backup.sh), so in SIMPLE mode
+  # the log space is reused automatically and the log file does not fill the disk.
   mssql-init:
     image: mcr.microsoft.com/mssql/server:2022-latest
     depends_on:
@@ -53,7 +56,8 @@ services:
       SQLCMDPASSWORD: "${DB_PASSWORD}"
     command: >
       /opt/mssql-tools18/bin/sqlcmd -S mssql -U sa -C -b
-      -Q "IF DB_ID('${DB_NAME:-animaladoption}') IS NULL CREATE DATABASE [${DB_NAME:-animaladoption}]"
+      -Q "IF DB_ID('${DB_NAME:-animaladoption}') IS NULL CREATE DATABASE [${DB_NAME:-animaladoption}];
+          ALTER DATABASE [${DB_NAME:-animaladoption}] SET RECOVERY SIMPLE"
     logging: *logging
 
   rabbitmq:
