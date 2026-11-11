@@ -33,9 +33,9 @@ services:
     healthcheck:
       test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -C -Q 'SELECT 1'"]
       interval: 10s
-      timeout: 5s
+      timeout: 10s
       retries: 10
-      start_period: 30s
+      start_period: 90s
     logging: *logging
 
   # One-off container: creates the database if it does not exist yet, then exits
@@ -60,12 +60,14 @@ services:
       RABBITMQ_DEFAULT_PASS: "${RABBITMQ_PASSWORD:?Set RABBITMQ_PASSWORD in .env}"
     volumes:
       - rabbitmq-data:/var/lib/rabbitmq
+    # Generous times: on a small VM (burstable B-series CPU) the first start, together with SQL Server,
+    # can take long, and the rabbitmq-diagnostics tool itself needs a few seconds to run
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
       interval: 10s
-      timeout: 10s
+      timeout: 30s
       retries: 10
-      start_period: 20s
+      start_period: 90s
     logging: *logging
 
   app:
