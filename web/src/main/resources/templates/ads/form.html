@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="pl" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout/base :: layout(~{::main})}">
+<body>
+<main class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-12 w-full flex-grow">
+
+  <div class="bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
+    <!-- Dynamic heading -->
+    <h2 class="text-3xl font-bold text-gray-800 mb-6" th:text="${editMode == true} ? #{ads.form.title.edit} : #{ads.form.title.new}">Dodaj nowe ogłoszenie</h2>
+
+    <!-- Displaying the file size limit error from the backend -->
+    <div th:if="${errorMessage}" class="bg-red-50 text-red-600 p-4 rounded-xl text-sm mb-6 border border-red-100 flex items-center shadow-sm fade-in">
+      <i class="ph ph-warning-circle text-2xl mr-2"></i>
+      <span th:text="#{${errorMessage}}"></span>
+    </div>
+
+    <!-- Dynamic form action: /ads/new or /ads/{id}/edit -->
+    <form th:action="${editMode == true} ? @{/ads/{id}/edit(id=${adId})} : @{/ads/new}" th:object="${adCreateDto}" method="post" enctype="multipart/form-data" class="space-y-6">
+
+      <div>
+        <label for="title" class="block text-sm font-medium text-gray-700 mb-1">[[#{ads.form.field.title}]]</label>
+        <input type="text" id="title" th:field="*{title}" th:placeholder="#{ads.form.placeholder.title}"
+               class="w-full px-4 py-2 rounded-lg border focus:ring-2 focus:ring-primary focus:border-primary outline-none transition"
+               th:classappend="${#fields.hasErrors('title')} ? 'border-red-500' : 'border-gray-300'">
+        <p th:if="${#fields.hasErrors('title')}" th:errors="*{title}" class="mt-1 text-sm text-red-500"></p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div>
+          <label for="categoryId" class="block text-sm font-medium text-gray-700 mb-1">[[#{ads.form.field.category}]]</label>
+          <select id="categoryId" th:field="*{categoryId}"
+                  class="w-full px-4 py-2 rounded-lg border focus:ring-2 focus:ring-primary focus:border-primary outline-none transition"
+                  th:classappend="${#fields.hasErrors('categoryId')} ? 'border-red-500' : 'border-gray-300'">
+            <option value="">[[#{ads.form.chooseCategory}]]</option>
+            <option th:each="cat : ${categories}" th:value="${cat.id}" th:text="${@translationService.getOrDefault(cat.messageKey, cat.name)}"></option>
+          </select>
+          <p th:if="${#fields.hasErrors('categoryId')}" th:errors="*{categoryId}" class="mt-1 text-sm text-red-500"></p>
+        </div>
+
+        <div>
+          <label for="location" class="block text-sm font-medium text-gray-700 mb-1">[[#{ads.form.field.location}]]</label>
+          <input type="text" id="location" th:field="*{location}" th:placeholder="#{ads.form.placeholder.location}"
+                 class="w-full px-4 py-2 rounded-lg border focus:ring-2 focus:ring-primary focus:border-primary outline-none transition"
+                 th:classappend="${#fields.hasErrors('location')} ? 'border-red-500' : 'border-gray-300'">
+          <p th:if="${#fields.hasErrors('location')}" th:errors="*{location}" class="mt-1 text-sm text-red-500"></p>
+        </div>
+      </div>
+
+      <!-- Information about the animal - optional, but it lets adopters find the listing with the board filters -->
+      <fieldset class="border border-gray-200 rounded-xl p-5 space-y-4">
+        <legend class="px-2 text-sm font-bold text-gray-700">[[#{ads.form.animal.legend}]]</legend>
+        <p class="text-xs text-gray-500 -mt-2">[[#{ads.form.animal.hint}]]</p>
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div>
+            <label for="age" class="block text-sm font-medium text-gray-700 mb-1">[[#{animal.age}]]</label>
+            <select id="age" th:field="*{age}" class="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-primary focus:border-primary outline-none transition">
+              <option value="">[[#{ads.form.animal.notSpecified}]]</option>
+              <option th:each="opt : ${ageOptions}" th:value="${opt}" th:text="#{${'animal.age.' + opt}}"></option>
+            </select>
+          </div>
+          <div>
+            <label for="sex" class="block text-sm font-medium text-gray-700 mb-1">[[#{animal.sex}]]</label>
+            <select id="sex" th:field="*{sex}" class="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-primary focus:border-primary outline-none transition">
+              <option value="">[[#{ads.form.animal.notSpecified}]]</option>
+              <option th:each="opt : ${sexOptions}" th:value="${opt}" th:text="#{${'animal.sex.' + opt}}"></option>
+            </select>
+          </div>
+          <div>
+            <label for="size" class="block text-sm font-medium text-gray-700 mb-1">[[#{animal.size}]]</label>
+            <select id="size" th:field="*{size}" class="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-primary focus:border-primary outline-none transition">
+              <option value="">[[#{ads.form.animal.notSpecified}]]</option>
+              <option th:each="opt : ${sizeOptions}" th:value="${opt}" th:text="#{${'animal.size.' + opt}}"></option>
+            </select>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <label class="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+            <input type="checkbox" th:field="*{vaccinated}" class="w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary">
+            [[#{animal.feature.vaccinated}]]
+          </label>
+          <label class="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+            <input type="checkbox" th:field="*{sterilized}" class="w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary">
+            [[#{animal.feature.sterilized}]]
+          </label>
+          <label class="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+            <input type="checkbox" th:field="*{chipped}" class="w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary">
+            [[#{animal.feature.chipped}]]
+          </label>
+          <label class="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+            <input type="checkbox" th:field="*{goodWithKids}" class="w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary">
+            [[#{animal.feature.goodWithKids}]]
+          </label>
+          <label class="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+            <input type="checkbox" th:field="*{goodWithAnimals}" class="w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary">
+            [[#{animal.feature.goodWithAnimals}]]
+          </label>
+        </div>
+      </fieldset>
+
+      <!-- PHOTO FIELD with a dynamic JS error and preview -->
+      <div>
+        <label for="imageFiles" class="block text-sm font-medium text-gray-700 mb-1">[[#{ads.form.field.images}]]</label>
+        <input type="file" id="imageFiles" name="imageFiles" accept="image/*" multiple
+               class="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-primary focus:border-primary outline-none transition file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-orange-50 file:text-primary hover:file:bg-orange-100">
+
+        <!-- Different instructions depending on the mode -->
+        <p class="text-xs text-gray-500 mt-1" th:unless="${editMode == true}">[[#{ads.form.images.hint}]]</p>
+        <p class="text-xs text-blue-600 font-medium mt-1" th:if="${editMode == true}">
+          <i class="ph-fill ph-info"></i> [(#{ads.form.images.hint.edit})]
+        </p>
+
+        <!-- Reserved space for the error message -->
+        <p id="fileSizeError" class="hidden text-red-500 text-sm font-medium mt-2 p-3 bg-red-50 rounded-lg border border-red-100"></p>
+
+        <!-- Dynamic photo thumbnail preview -->
+        <div id="imagePreviewContainer" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 mt-4 empty:hidden"></div>
+      </div>
+
+      <div>
+        <label for="description" class="block text-sm font-medium text-gray-700 mb-1">[[#{ads.form.field.description}]]</label>
+        <textarea id="description" th:field="*{description}" rows="6" th:placeholder="#{ads.form.placeholder.description}"
+                  class="w-full px-4 py-2 rounded-lg border focus:ring-2 focus:ring-primary focus:border-primary outline-none transition resize-none"
+                  th:classappend="${#fields.hasErrors('description')} ? 'border-red-500' : 'border-gray-300'"></textarea>
+        <p th:if="${#fields.hasErrors('description')}" th:errors="*{description}" class="mt-1 text-sm text-red-500"></p>
+      </div>
+
+      <div class="pt-4">
+        <!-- Dynamic submit button -->
+        <button type="submit" class="w-full bg-primary hover:bg-primaryHover text-white font-bold py-3 px-4 rounded-xl shadow-md transition" th:text="${editMode == true} ? #{ads.form.submit.edit} : #{ads.form.submit.new}">
+          Opublikuj ogłoszenie
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Improved validation and photo thumbnail preview -->
+  <script th:inline="javascript">
+            // Message texts from the translations module (inserted by Thymeleaf in the current language)
+            const I18N = {
+                blocked: /*[[#{ads.form.js.blocked}]]*/ 'Zablokowano:',
+                totalTooBig: /*[[#{ads.form.js.totalTooBig}]]*/ '',
+                singleTooBig: /*[[#{ads.form.js.singleTooBig}]]*/ ''
+            };
+            const fileInput = document.getElementById('imageFiles');
+            const previewContainer = document.getElementById('imagePreviewContainer');
+            const errorMsg = document.getElementById('fileSizeError');
+            // The form containing the file field - document.querySelector('form') would return the logout form from the navbar
+            const form = fileInput.closest('form');
+
+            // NOTE: The limit was reduced to 2MB because the server rejects larger payloads (3.5MB)
+            const SAFE_SINGLE_SIZE = 1 * 1024 * 1024; // 1 MB
+            const SAFE_TOTAL_SIZE = 2 * 1024 * 1024;  // 2 MB (Tomcat's default limit)
+
+            fileInput.addEventListener('change', function() {
+                previewContainer.innerHTML = '';
+                errorMsg.classList.add('hidden');
+                fileInput.classList.remove('border-red-500', 'bg-red-50');
+
+                let totalSize = 0;
+                let hasError = false;
+
+                Array.from(this.files).forEach(file => {
+                    totalSize += file.size;
+                    const isTooBig = file.size > SAFE_SINGLE_SIZE;
+                    if(isTooBig) hasError = true;
+
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        const div = document.createElement('div');
+                        div.className = `relative rounded-xl overflow-hidden border-2 shadow-sm aspect-square group fade-in ${isTooBig ? 'border-red-500' : 'border-gray-200'}`;
+
+                        div.innerHTML = `
+                            <img src="${e.target.result}" class="w-full h-full object-cover" />
+                            <div class="absolute inset-0 bg-black/40 flex flex-col items-center justify-center text-white opacity-0 group-hover:opacity-100 transition duration-200">
+                                <span class="text-sm font-bold">${(file.size / 1024).toFixed(0)} KB</span>
+                            </div>
+                            ${isTooBig ? '<div class="absolute top-1 right-1 bg-red-500 text-white text-xs px-2 py-1 rounded-md font-bold shadow-md"><i class="ph ph-warning-circle"></i> >1MB</div>' : ''}
+                        `;
+                        previewContainer.appendChild(div);
+                    }
+                    reader.readAsDataURL(file);
+                });
+
+                if (totalSize > SAFE_TOTAL_SIZE) {
+                    showError(I18N.totalTooBig.replace('{0}', (totalSize / 1024 / 1024).toFixed(1)));
+                } else if (hasError) {
+                    showError(I18N.singleTooBig);
+                }
+            });
+
+            function showError(text) {
+                errorMsg.innerHTML = `<i class="ph ph-warning-circle inline-block align-text-bottom mr-1 text-lg"></i> <strong>${I18N.blocked}</strong> ${text}`;
+                errorMsg.classList.remove('hidden');
+                fileInput.classList.add('border-red-500', 'bg-red-50');
+            }
+
+            form.addEventListener('submit', function(event) {
+                let totalSize = 0;
+                let hasError = false;
+
+                Array.from(fileInput.files).forEach(f => {
+                    totalSize += f.size;
+                    if(f.size > SAFE_SINGLE_SIZE) hasError = true;
+                });
+
+                if (hasError || totalSize > SAFE_TOTAL_SIZE) {
+                    event.preventDefault();
+                    fileInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            });
+        </script>
+</main>
+</body>
+</html>

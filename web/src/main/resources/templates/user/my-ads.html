@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="pl" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout/base :: layout(~{::main})}">
+<body>
+<main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 w-full flex-grow relative">
+
+    <div class="mb-8 border-b border-gray-200 pb-5">
+        <h2 class="text-3xl font-bold text-gray-800">[[#{myAds.title}]]</h2>
+        <p class="text-gray-500 mt-2">[[#{myAds.subtitle}]]</p>
+    </div>
+
+    <!-- NEW: Information banner (e.g. about pending moderation) -->
+    <div th:if="${infoMessage}" class="bg-blue-50 text-blue-700 p-4 rounded-xl text-sm mb-6 border border-blue-200 flex items-center shadow-sm fade-in">
+        <i class="ph-fill ph-info text-2xl mr-3"></i>
+        <span class="font-medium" th:text="#{${infoMessage}}"></span>
+    </div>
+
+    <!-- When the user has not added any listing yet -->
+    <div th:if="${#lists.isEmpty(ads)}" class="text-center py-20 bg-white rounded-2xl border border-dashed border-gray-300">
+        <i class="ph ph-folder-open text-6xl text-gray-300 mb-4"></i>
+        <h3 class="text-xl font-medium text-gray-600">[[#{myAds.empty.title}]]</h3>
+        <p class="text-gray-400 mt-2 mb-6">[[#{myAds.empty.text}]]</p>
+        <a th:href="@{/ads/new}" class="inline-block bg-primary hover:bg-primaryHover text-white px-6 py-3 rounded-full font-bold transition">
+            [[#{myAds.empty.add}]]
+        </a>
+    </div>
+
+    <!-- Grid of the user's own listings -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6" th:unless="${#lists.isEmpty(ads)}">
+
+        <article th:each="ad : ${ads}" class="bg-surface rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col transition hover:shadow-md">
+
+            <!-- Image area (clickable - preview) -->
+            <div class="relative h-48 bg-gray-100 flex-shrink-0 cursor-pointer group overflow-hidden"
+                 th:hx-get="@{/ads/{id}(id=${ad.id})}"
+                 hx-target="#modal-container"
+                 hx-swap="innerHTML">
+
+                <img th:if="${not #lists.isEmpty(ad.imageUrls)}" th:src="${ad.imageUrls[0]}" th:alt="#{common.image.generic}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+                <div th:if="${#lists.isEmpty(ad.imageUrls)}" class="w-full h-full flex items-center justify-center text-gray-300 group-hover:scale-105 transition-transform duration-500">
+                    <i class="ph ph-paw-print text-5xl"></i>
+                </div>
+
+                <div class="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center z-10">
+                    <div class="bg-white/95 text-gray-800 px-5 py-2 rounded-full font-bold flex items-center shadow-lg transform translate-y-4 group-hover:translate-y-0 transition-all duration-300">
+                        <i class="ph text-xl ph-eye mr-2 text-primary"></i> [[#{common.preview}]]
+                    </div>
+                </div>
+
+                <!-- STATUS LABELS -->
+                <div th:if="${ad.status.name() == 'ACTIVE'}" class="absolute top-3 right-3 bg-green-500 text-white px-3 py-1 rounded-md text-xs font-bold shadow-sm flex items-center z-20">
+                    <i class="ph-fill ph-check-circle mr-1"></i> [[#{adStatus.ACTIVE}]]
+                </div>
+                <div th:if="${ad.status.name() == 'PENDING'}" class="absolute top-3 right-3 bg-yellow-500 text-white px-3 py-1 rounded-md text-xs font-bold shadow-sm flex items-center z-20">
+                    <i class="ph-fill ph-hourglass mr-1"></i> [[#{adStatus.PENDING}]]
+                </div>
+                <div th:if="${ad.status.name() == 'REJECTED'}" class="absolute top-3 right-3 bg-red-500 text-white px-3 py-1 rounded-md text-xs font-bold shadow-sm flex items-center z-20">
+                    <i class="ph-fill ph-x-circle mr-1"></i> [[#{adStatus.REJECTED}]]
+                </div>
+                <div th:if="${ad.status.name() == 'ADOPTED'}" class="absolute top-3 right-3 bg-purple-500 text-white px-3 py-1 rounded-md text-xs font-bold shadow-sm flex items-center z-20">
+                    <i class="ph-fill ph-heart mr-1"></i> [[#{adStatus.ADOPTED}]]
+                </div>
+                <div th:if="${ad.status.name() == 'ARCHIVED'}" class="absolute top-3 right-3 bg-gray-500 text-white px-3 py-1 rounded-md text-xs font-bold shadow-sm flex items-center z-20">
+                    <i class="ph-fill ph-archive mr-1"></i> [[#{adStatus.ARCHIVED}]]
+                </div>
+                <div th:if="${ad.status.name() == 'REMOVED'}" class="absolute top-3 right-3 bg-gray-800 text-white px-3 py-1 rounded-md text-xs font-bold shadow-sm flex items-center z-20">
+                    <i class="ph-fill ph-trash mr-1"></i> [[#{adStatus.REMOVED}]]
+                </div>
+            </div>
+
+            <div class="p-5 flex-grow flex flex-col">
+                <span class="text-xs font-bold text-primary uppercase tracking-wider mb-1" th:text="${@translationService.getOrDefault(ad.category.messageKey, ad.category.name)}">Kategoria</span>
+
+                <h3 class="text-lg font-bold text-gray-800 mb-1 leading-tight line-clamp-2 cursor-pointer hover:text-primary transition-colors"
+                    th:hx-get="@{/ads/{id}(id=${ad.id})}"
+                    hx-target="#modal-container"
+                    hx-swap="innerHTML"
+                    th:text="${ad.title}" th:title="#{myAds.clickToPreview}">Tytuł</h3>
+
+                <p class="text-sm text-gray-500 mb-4 flex items-center">
+                    <i class="ph ph-calendar-blank mr-1"></i> [[#{myAds.addedOn}]] <span th:text="${#temporals.format(ad.createdAt, 'dd.MM.yyyy')}"></span>
+                </p>
+
+                <!-- Warning for rejected listings -->
+                <div th:if="${ad.status.name() == 'REJECTED'}" class="bg-red-50 text-red-600 p-2 rounded-lg text-xs font-medium mb-3 flex items-start">
+                    <i class="ph-fill ph-warning-circle mr-1 mt-0.5 text-base flex-shrink-0"></i>
+                    <div>
+                        <p>[[#{myAds.rejected.info}]]</p>
+                        <!-- Reason from the moderator (older rejections may not have one) -->
+                        <p th:if="${ad.rejectionReason != null}" class="mt-1 text-red-700">
+                            <strong>[[#{myAds.rejected.reason}]]</strong>
+                            <span class="whitespace-pre-wrap" th:text="${ad.rejectionReason}">Powód</span>
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Action buttons (only for active, pending or rejected listings) -->
+                <div class="mt-auto pt-4 border-t border-gray-100 flex flex-col gap-2" th:if="${ad.status.name() == 'ACTIVE' or ad.status.name() == 'PENDING' or ad.status.name() == 'REJECTED'}">
+
+                    <!-- Main edit button -->
+                    <a th:href="@{/ads/{id}/edit(id=${ad.id})}" class="w-full bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-700 py-2 rounded-xl text-sm font-bold transition flex items-center justify-center" th:title="#{myAds.edit}">
+                        <i class="ph-fill ph-pencil-simple mr-2"></i> [[#{myAds.edit}]]
+                    </a>
+
+                    <!-- Status buttons (Close or Adopted) -->
+                    <div class="flex gap-2">
+                        <!-- Adopted (only for published listings) -->
+                        <form th:action="@{/my-ads/{id}/status(id=${ad.id})}" method="post" class="flex-1" th:if="${ad.status.name() == 'ACTIVE'}">
+                            <input type="hidden" name="status" value="ADOPTED" />
+                            <button type="button" th:data-confirm="#{myAds.confirm.adopted}" onclick="openConfirmModal(this, this.dataset.confirm, 'ADOPTED')" class="w-full bg-purple-50 hover:bg-purple-100 border border-purple-200 text-purple-700 py-2 rounded-xl text-sm font-bold transition flex items-center justify-center" th:title="#{myAds.markAdopted.title}">
+                                <i class="ph-fill ph-heart mr-1"></i> [[#{myAds.markAdopted}]]
+                            </button>
+                        </form>
+
+                        <!-- Close -->
+                        <form th:action="@{/my-ads/{id}/status(id=${ad.id})}" method="post" class="flex-1">
+                            <input type="hidden" name="status" value="ARCHIVED" />
+                            <button type="button" th:data-confirm="#{myAds.confirm.archived}" onclick="openConfirmModal(this, this.dataset.confirm, 'ARCHIVED')" class="w-full bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-700 py-2 rounded-xl text-sm font-bold transition flex items-center justify-center" th:title="#{myAds.archive.title}">
+                                <i class="ph-fill ph-archive mr-1"></i> [[#{myAds.archive}]]
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Removed by a moderator - final, the listing can no longer be edited -->
+                <div th:if="${ad.status.name() == 'REMOVED'}" class="bg-gray-100 text-gray-700 p-2 rounded-lg text-xs font-medium mb-3 flex items-start">
+                    <i class="ph-fill ph-trash mr-1 mt-0.5 text-base flex-shrink-0"></i>
+                    <div>
+                        <p>[[#{myAds.removed.info}]]</p>
+                        <p th:if="${ad.removalReason != null}" class="mt-1">
+                            <strong>[[#{myAds.rejected.reason}]]</strong>
+                            <span class="whitespace-pre-wrap" th:text="${ad.removalReason}">Powód</span>
+                        </p>
+                    </div>
+                </div>
+
+                <div class="mt-auto pt-4 border-t border-gray-100 text-center" th:if="${ad.status.name() == 'ADOPTED' or ad.status.name() == 'ARCHIVED' or ad.status.name() == 'REMOVED'}">
+                    <span class="text-sm text-gray-500 font-medium">[[#{myAds.inactive}]]</span>
+                </div>
+
+            </div>
+        </article>
+
+    </div>
+
+    <div id="custom-confirm-modal" class="fixed inset-0 bg-black/60 z-[110] hidden items-center justify-center p-4 fade-in" onclick="if(event.target === this) closeConfirmModal()">
+        <div class="bg-white rounded-3xl w-full max-w-sm p-8 shadow-2xl relative text-center">
+
+            <div id="modal-icon-container" class="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-5">
+                <i id="modal-icon" class="ph text-4xl"></i>
+            </div>
+
+            <h3 class="text-2xl font-bold text-gray-800 mb-3">[[#{myAds.confirm.title}]]</h3>
+            <p id="confirm-message" class="text-gray-500 mb-8 leading-relaxed">[[#{myAds.confirm.default}]]</p>
+
+            <div class="flex flex-col space-y-3">
+                <button id="confirm-action-btn" onclick="executeAction()" class="w-full text-white py-3 rounded-xl font-bold transition shadow-sm">
+                    [[#{myAds.confirm.ok}]]
+                </button>
+                <button onclick="closeConfirmModal()" class="w-full bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 py-3 rounded-xl font-bold transition">
+                    [[#{myAds.confirm.cancel}]]
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script th:inline="javascript">
+            // Button texts from the translations module (inserted by Thymeleaf in the current language)
+            const I18N = {
+                adoptedButton: /*[[#{myAds.confirm.adopted.button}]]*/ 'Tak, adoptowany',
+                archivedButton: /*[[#{myAds.confirm.archived.button}]]*/ 'Tak, zakończ ogłoszenie'
+            };
+            let formToSubmit = null;
+
+            function openConfirmModal(buttonElement, message, actionType) {
+                formToSubmit = buttonElement.closest('form');
+                document.getElementById('confirm-message').innerText = message;
+
+                const confirmBtn = document.getElementById('confirm-action-btn');
+                const iconContainer = document.getElementById('modal-icon-container');
+                const icon = document.getElementById('modal-icon');
+
+                if(actionType === 'ADOPTED') {
+                    confirmBtn.className = 'w-full bg-purple-600 hover:bg-purple-700 text-white py-3 rounded-xl font-bold transition shadow-sm';
+                    confirmBtn.innerText = I18N.adoptedButton;
+                    iconContainer.className = 'w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-5 bg-purple-100 text-purple-600';
+                    icon.className = 'ph-fill ph-heart text-4xl';
+                } else {
+                    confirmBtn.className = 'w-full bg-gray-800 hover:bg-gray-900 text-white py-3 rounded-xl font-bold transition shadow-sm';
+                    confirmBtn.innerText = I18N.archivedButton;
+                    iconContainer.className = 'w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-5 bg-gray-100 text-gray-600';
+                    icon.className = 'ph-fill ph-archive text-4xl';
+                }
+
+                document.getElementById('custom-confirm-modal').classList.remove('hidden');
+                document.getElementById('custom-confirm-modal').classList.add('flex');
+            }
+
+            function closeConfirmModal() {
+                document.getElementById('custom-confirm-modal').classList.add('hidden');
+                document.getElementById('custom-confirm-modal').classList.remove('flex');
+                formToSubmit = null;
+            }
+
+            function executeAction() {
+                if (formToSubmit) {
+                    formToSubmit.submit();
+                }
+            }
+        </script>
+</main>
+</body>
+</html>

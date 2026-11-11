@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="pl" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout/base :: layout(~{::main})}">
+<body>
+<main class="max-w-md mx-auto px-4 py-16 w-full flex-grow">
+
+  <div class="bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
+    <div class="text-center mb-8">
+      <i class="ph-fill ph-paw-print text-4xl text-primary mb-2"></i>
+      <h2 class="text-3xl font-bold text-gray-800">[[#{login.title}]]</h2>
+      <p class="text-gray-500 mt-2">[[#{login.subtitle}]]</p>
+    </div>
+
+    <!-- Success messages from flash attributes (e.g. after successful link verification) -->
+    <div th:if="${successMessage}" class="bg-green-50 text-green-700 p-4 rounded-xl text-sm mb-6 border border-green-200 flex items-center shadow-sm fade-in">
+      <i class="ph-fill ph-check-circle text-2xl mr-2"></i>
+      <span th:text="#{${successMessage}}"></span>
+    </div>
+
+    <!-- Message after successful registration (listens for the ?success URL parameter) -->
+    <div th:if="${param.success}" class="bg-green-50 text-green-700 p-4 rounded-xl text-sm mb-6 border border-green-200 flex items-start shadow-sm fade-in">
+      <i class="ph-fill ph-envelope-open text-2xl mr-3 mt-0.5"></i>
+      <div>
+        <strong>[[#{login.registered.title}]]</strong><br>
+        <span>[[#{login.registered.text}]]</span>
+      </div>
+    </div>
+
+    <!-- Error messages (e.g. expired/used verification link) -->
+    <div th:if="${errorMessage}" class="bg-red-50 text-red-600 p-4 rounded-xl text-sm mb-6 border border-red-100 flex items-center shadow-sm fade-in">
+      <i class="ph-fill ph-x-circle text-2xl mr-2"></i>
+      <span th:text="#{${errorMessage}}"></span>
+    </div>
+
+    <!-- The session was logged out because the account's email changed (e.g. on another device) -->
+    <div th:if="${param.expired}" class="bg-blue-50 text-blue-700 p-4 rounded-xl text-sm mb-6 border border-blue-100 flex items-center shadow-sm fade-in">
+      <i class="ph-fill ph-info text-2xl mr-2"></i>
+      <span>[[#{login.sessionExpired}]]</span>
+    </div>
+
+    <!-- Account blocked by a moderator: reason and end of the ban (see LoginFailureHandler / StaleSessionInterceptor) -->
+    <div th:if="${banNotice}" class="bg-red-50 text-red-700 p-4 rounded-xl text-sm mb-6 border border-red-200 flex items-start shadow-sm fade-in">
+      <i class="ph-fill ph-prohibit text-2xl mr-3 mt-0.5"></i>
+      <div>
+        <strong>[[#{login.banned.title}]]</strong><br>
+        <span th:text="#{login.banned.until(${#temporals.format(banNotice.bannedUntil, 'dd.MM.yyyy HH:mm')})}">Do 01.01.2027 12:00</span><br>
+        <span class="font-bold">[[#{login.banned.reason}]]</span>
+        <span class="whitespace-pre-wrap" th:text="${banNotice.reason}">Powód</span>
+      </div>
+    </div>
+
+    <!-- Standard login error (wrong password / no such user) -->
+    <div th:if="${param.error} and (${session['SPRING_SECURITY_LAST_EXCEPTION']} == null or !(${#strings.contains(session['SPRING_SECURITY_LAST_EXCEPTION'].toString(), 'DisabledException')} or ${#strings.contains(session['SPRING_SECURITY_LAST_EXCEPTION'].toString(), 'LockedException')}))"
+         class="bg-red-50 text-red-600 p-4 rounded-xl text-sm mb-6 border border-red-100 flex items-center shadow-sm fade-in">
+      <i class="ph ph-warning-circle text-2xl mr-2"></i>
+      <span>[[#{login.error.badCredentials}]]</span>
+    </div>
+
+    <!-- Special error for an unverified account -->
+    <div th:if="${param.error} and ${session['SPRING_SECURITY_LAST_EXCEPTION']} != null and ${#strings.contains(session['SPRING_SECURITY_LAST_EXCEPTION'].toString(), 'DisabledException')}"
+         class="bg-amber-50 text-amber-700 p-4 rounded-xl text-sm mb-6 border border-amber-200 flex items-start shadow-sm fade-in">
+      <i class="ph-fill ph-warning text-2xl mr-2 mt-0.5"></i>
+      <div>
+        <strong>[[#{login.error.disabled.title}]]</strong><br>
+        <span>[[#{login.error.disabled.text}]]</span>
+      </div>
+    </div>
+
+    <!-- Account temporarily locked after too many wrong passwords (LoginAttemptService) -->
+    <div th:if="${param.error} and ${session['SPRING_SECURITY_LAST_EXCEPTION']} != null and ${#strings.contains(session['SPRING_SECURITY_LAST_EXCEPTION'].toString(), 'LockedException')}"
+         class="bg-red-50 text-red-600 p-4 rounded-xl text-sm mb-6 border border-red-100 flex items-start shadow-sm fade-in">
+      <i class="ph-fill ph-lock-key text-2xl mr-2 mt-0.5"></i>
+      <div>
+        <strong>[[#{login.error.locked.title}]]</strong><br>
+        <span>[[#{login.error.locked.text}]]</span>
+      </div>
+    </div>
+
+    <form th:action="@{/login}" method="post" class="space-y-5">
+
+      <div>
+        <label for="username" class="block text-sm font-medium text-gray-700 mb-1">[[#{login.email}]]</label>
+        <div class="relative">
+          <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+            <i class="ph ph-envelope-simple text-lg"></i>
+          </div>
+          <input type="email" id="username" name="username" required th:placeholder="#{login.email.placeholder}"
+                 class="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-primary focus:border-primary outline-none transition bg-gray-50 focus:bg-white">
+        </div>
+      </div>
+
+      <div>
+        <label for="password" class="block text-sm font-medium text-gray-700 mb-1">[[#{login.password}]]</label>
+        <div class="relative">
+          <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+            <i class="ph ph-lock-key text-lg"></i>
+          </div>
+          <input type="password" id="password" name="password" required placeholder="••••••••"
+                 class="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-primary focus:border-primary outline-none transition bg-gray-50 focus:bg-white">
+        </div>
+      </div>
+
+      <!-- Remember me checkbox + Forgot password link -->
+      <div class="flex items-center justify-between pt-1 pb-1">
+        <label for="remember-me" class="flex items-center cursor-pointer group">
+          <!-- name="remember-me" is required for this to work with Spring Security! -->
+          <input type="checkbox" id="remember-me" name="remember-me"
+                 class="w-4 h-4 text-primary bg-gray-100 border-gray-300 rounded focus:ring-primary focus:ring-2 cursor-pointer transition">
+          <span class="ml-2 text-sm text-gray-600 group-hover:text-gray-800 transition">[[#{login.rememberMe}]]</span>
+        </label>
+
+        <a th:href="@{/forgot-password}" class="text-primary hover:text-primaryHover font-bold text-sm transition">[[#{login.forgotPassword}]]</a>
+      </div>
+
+      <div class="pt-2">
+        <button type="submit" class="w-full bg-primary hover:bg-primaryHover text-white font-bold py-3 px-4 rounded-xl shadow-md transition flex items-center justify-center">
+          [[#{login.submit}]] <i class="ph ph-sign-in ml-2 text-xl"></i>
+        </button>
+      </div>
+    </form>
+
+    <div class="mt-6 text-center text-sm text-gray-600">
+      [[#{login.noAccount}]]
+      <a th:href="@{/register}" class="text-primary hover:text-primaryHover font-bold transition">[[#{login.registerLink}]]</a>
+    </div>
+
+  </div>
+</main>
+</body>
+</html>

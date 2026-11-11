@@ -1,0 +1,78 @@
+spring:
+  datasource:
+    url: jdbc:sqlserver://${DB_HOST:localhost}:${DB_PORT:1433};databaseName=${DB_NAME:animaladoption};encrypt=false
+    username: ${DB_USER}
+    password: ${DB_PASSWORD}
+    driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: ${MAIL_USERNAME}
+    password: ${MAIL_PASSWORD}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+
+  sql:
+    init:
+      mode: always
+
+  jpa:
+    defer-datasource-initialization: true
+    hibernate:
+      ddl-auto: update
+    # SQL logging only for debugging (SHOW_SQL=true) - on production it slows the application down and fills the logs
+    show-sql: ${SHOW_SQL:false}
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.SQLServerDialect
+
+  # Upload limits - a single photo up to 10 MB, the whole form (a listing with several photos) up to 30 MB.
+  # Without them anyone could tie up the server by sending huge requests.
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 30MB
+
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USER}
+    password: ${RABBITMQ_PASSWORD}
+
+server:
+  port: ${SERVER_PORT:8080}
+  tomcat:
+    # Upper bound for any request body, consistent with spring.servlet.multipart.max-request-size
+    max-http-request-size: 30MB
+    # Maximum number of parts in a multipart/form-data request. EVERY form field is a part (not only files) -
+    # the listing form has ~20 of them (animal information, checkboxes with hidden "_field" markers) plus one
+    # per photo. Tomcat's default of 10 rejected the form with FileCountLimitExceededException.
+    # The limit still exists, so nobody can send a request with thousands of tiny parts.
+    max-part-count: 50
+  # Behind a reverse proxy (nginx, Cloudflare) set FORWARD_HEADERS_STRATEGY=native, so that the real client IP
+  # is read from the X-Forwarded-For header (needed by the request limits in RateLimitFilter).
+  # Without a proxy it must stay "none" - otherwise anyone could fake their IP by sending that header themselves.
+  forward-headers-strategy: ${FORWARD_HEADERS_STRATEGY:none}
+
+# Our own application configuration
+app:
+  # Public address of the application - used in links sent by email (e.g. the account verification link)
+  base-url: ${APP_BASE_URL:http://localhost:${SERVER_PORT:8080}}
+  # First administrator account, created at startup ONLY if the database has no administrator yet
+  # (see InitialAdminCreator). Further roles are given by an administrator on the user's profile.
+  # After the first start both variables can be removed.
+  initial-admin:
+    email: ${INITIAL_ADMIN_EMAIL:}
+    password: ${INITIAL_ADMIN_PASSWORD:}
+  security:
+    # Key for the "Remember me" feature
+    remember-me-key: ${REMEMBER_ME_KEY}
+    # Key for encrypting sensitive data in the database (any length - a 256-bit AES key is derived from it with SHA-256)
+    crypto-key: ${CRYPTO_KEY}
+    # Limits on the number of requests to sensitive endpoints (see RateLimitFilter)
+    rate-limit:
+      enabled: ${RATE_LIMIT_ENABLED:true}

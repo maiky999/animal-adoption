@@ -1,0 +1,53 @@
+package com.wsb.animaladoption.repository;
+
+import com.wsb.animaladoption.model.Message;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+
+import java.util.List;
+
+public interface MessageRepository extends JpaRepository<Message, Long> {
+    List<Message> findBySenderIdOrReceiverIdOrderBySentAtDesc(Long senderId, Long receiverId);
+
+    @Query("SELECT m FROM Message m WHERE m.relatedAd.id = :adId AND " +
+            "((m.sender.id = :user1Id AND m.receiver.id = :user2Id) OR " +
+            "(m.sender.id = :user2Id AND m.receiver.id = :user1Id)) " +
+            "ORDER BY m.sentAt ASC")
+    List<Message> findConversation(@Param("adId") Long adId,
+                                   @Param("user1Id") Long user1Id,
+                                   @Param("user2Id") Long user2Id);
+
+    /**
+     * Messages of the conversation newer than the given one (ids grow with every new message).
+     * Used by the chat to fetch only what arrived since the last refresh, instead of the whole conversation.
+     */
+    @Query("SELECT m FROM Message m WHERE m.relatedAd.id = :adId AND m.id > :afterId AND " +
+            "((m.sender.id = :user1Id AND m.receiver.id = :user2Id) OR " +
+            "(m.sender.id = :user2Id AND m.receiver.id = :user1Id)) " +
+            "ORDER BY m.id ASC")
+    List<Message> findConversationAfter(@Param("adId") Long adId,
+                                        @Param("user1Id") Long user1Id,
+                                        @Param("user2Id") Long user2Id,
+                                        @Param("afterId") Long afterId);
+
+    /** Checks whether the two users have exchanged at least one message about the given listing. */
+    @Query("SELECT COUNT(m) > 0 FROM Message m WHERE m.relatedAd.id = :adId AND " +
+            "((m.sender.id = :user1Id AND m.receiver.id = :user2Id) OR " +
+            "(m.sender.id = :user2Id AND m.receiver.id = :user1Id))")
+    boolean existsConversation(@Param("adId") Long adId,
+                               @Param("user1Id") Long user1Id,
+                               @Param("user2Id") Long user2Id);
+
+    long countByReceiverIdAndIsReadFalse(Long receiverId);
+
+    /** Checks whether the user has sent or received at least one message about the given listing. */
+    @Query("SELECT COUNT(m) > 0 FROM Message m WHERE m.relatedAd.id = :adId AND " +
+            "(m.sender.email = :email OR m.receiver.email = :email)")
+    boolean existsConversationAboutAd(@Param("adId") Long adId, @Param("email") String email);
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("UPDATE Message m SET m.isRead = true WHERE m.relatedAd.id = :adId AND m.sender.id = :senderId AND m.receiver.id = :receiverId AND m.isRead = false")
+    void markConversationAsRead(@Param("adId") Long adId, @Param("senderId") Long senderId, @Param("receiverId") Long receiverId);
+}

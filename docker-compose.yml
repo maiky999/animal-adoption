@@ -1,0 +1,45 @@
+version: '3.8'
+services:
+  mssql-db:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: animaladoption-mssql
+    # 127.0.0.1 - the database is reachable only from this computer (the application), not from the network
+    ports:
+      - "127.0.0.1:${DB_PORT:-1433}:1433"
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "${DB_PASSWORD}"
+      MSSQL_PID: "Developer"
+    volumes:
+      - mssql-data:/var/opt/mssql
+    healthcheck:
+      test: ["CMD", "/opt/mssql-tools18/bin/sqlcmd", "-S", "localhost", "-U", "sa", "-P", "${DB_PASSWORD}", "-C", "-Q", "SELECT 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  mssql-init:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: animaladoption-mssql-init
+    depends_on:
+      mssql-db:
+        condition: service_healthy
+    command: >
+      /bin/bash -c "
+        /opt/mssql-tools18/bin/sqlcmd -S mssql-db -U sa -P '${DB_PASSWORD}' -C -Q \"IF NOT EXISTS (SELECT * FROM sys.databases WHERE name = '${DB_NAME:-animaladoption}') BEGIN CREATE DATABASE ${DB_NAME:-animaladoption} END\"
+      "
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: animaladoption-rabbitmq
+    # 127.0.0.1 - the broker and its management panel are reachable only from this computer, not from the network
+    ports:
+      - "127.0.0.1:${RABBITMQ_PORT:-5672}:5672"
+      - "127.0.0.1:15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: "${RABBITMQ_USER}"
+      RABBITMQ_DEFAULT_PASS: "${RABBITMQ_PASSWORD}"
+
+volumes:
+  mssql-data:

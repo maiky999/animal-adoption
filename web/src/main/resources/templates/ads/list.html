@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="pl" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout/base :: layout(~{::main})}">
+<body>
+<main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 w-full flex-grow">
+
+  <h2 class="text-3xl font-bold text-gray-800 mb-6">[[#{ads.list.title}]]</h2>
+
+  <!--
+    Filters. Without JavaScript it is a regular GET form (/ads?q=...&age=...).
+    With HTMX the same request is sent in the background after every change, and only the #ads-results section
+    is taken from the response (hx-select) and swapped in. hx-push-url updates the address bar, so the
+    "back" button and shared links keep the search. hx-sync cancels a previous request still in progress.
+  -->
+  <form th:action="@{/ads}" method="get" th:object="${criteria}"
+        th:attr="hx-get=@{/ads}"
+        hx-target="#ads-results" hx-select="#ads-results" hx-swap="outerHTML" hx-push-url="true"
+        hx-trigger="submit, change from:.filter-auto, input delay:500ms from:.filter-text"
+        hx-sync="this:replace"
+        class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 mb-8 space-y-4">
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+      <div class="relative">
+        <i class="ph ph-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+        <input type="search" th:field="*{q}" th:placeholder="#{ads.filter.q.placeholder}" th:attr="aria-label=#{ads.filter.q}"
+               class="filter-text w-full pl-9 pr-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-primary focus:border-primary outline-none">
+      </div>
+      <div class="relative">
+        <i class="ph ph-map-pin absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+        <input type="search" th:field="*{location}" th:placeholder="#{ads.filter.location.placeholder}" th:attr="aria-label=#{ads.filter.location}"
+               class="filter-text w-full pl-9 pr-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-primary focus:border-primary outline-none">
+      </div>
+      <select th:field="*{categoryId}" th:attr="aria-label=#{ads.form.field.category}"
+              class="filter-auto border border-gray-300 rounded-lg px-3 py-2 focus:ring-primary focus:border-primary">
+        <option value="">[[#{ads.list.allCategories}]]</option>
+        <option th:each="cat : ${categories}" th:value="${cat.id}"
+                th:text="${@translationService.getOrDefault(cat.messageKey, cat.name)}"></option>
+      </select>
+      <select th:field="*{sort}" th:attr="aria-label=#{ads.filter.sort}"
+              class="filter-auto border border-gray-300 rounded-lg px-3 py-2 focus:ring-primary focus:border-primary">
+        <option value="NEWEST">[[#{ads.filter.sort.NEWEST}]]</option>
+        <option value="OLDEST">[[#{ads.filter.sort.OLDEST}]]</option>
+      </select>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      <select th:field="*{age}" th:attr="aria-label=#{animal.age}"
+              class="filter-auto border border-gray-300 rounded-lg px-3 py-2 focus:ring-primary focus:border-primary">
+        <option value="">[[#{ads.filter.anyAge}]]</option>
+        <option th:each="opt : ${ageOptions}" th:value="${opt}" th:text="#{${'animal.age.' + opt}}"></option>
+      </select>
+      <select th:field="*{sex}" th:attr="aria-label=#{animal.sex}"
+              class="filter-auto border border-gray-300 rounded-lg px-3 py-2 focus:ring-primary focus:border-primary">
+        <option value="">[[#{ads.filter.anySex}]]</option>
+        <option th:each="opt : ${sexOptions}" th:value="${opt}" th:text="#{${'animal.sex.' + opt}}"></option>
+      </select>
+      <select th:field="*{size}" th:attr="aria-label=#{animal.size}"
+              class="filter-auto border border-gray-300 rounded-lg px-3 py-2 focus:ring-primary focus:border-primary">
+        <option value="">[[#{ads.filter.anySize}]]</option>
+        <option th:each="opt : ${sizeOptions}" th:value="${opt}" th:text="#{${'animal.size.' + opt}}"></option>
+      </select>
+    </div>
+
+    <!-- Features: a ticked box shows only animals with that feature confirmed by the author -->
+    <div class="flex flex-wrap gap-2">
+      <label th:each="feature : ${ {'vaccinated', 'sterilized', 'chipped', 'goodWithKids', 'goodWithAnimals'} }"
+             class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-gray-200 bg-gray-50 text-sm text-gray-700 cursor-pointer hover:border-primary transition has-[:checked]:bg-orange-50 has-[:checked]:border-primary has-[:checked]:text-primary">
+        <input type="checkbox" th:name="${feature}" value="true"
+               th:checked="${criteria['__${feature}__'] == true}"
+               class="filter-auto w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary">
+        <span th:text="#{${'animal.feature.' + feature}}"></span>
+      </label>
+    </div>
+
+    <!-- Fallback for browsers without JavaScript; with HTMX the results refresh on their own -->
+    <noscript>
+      <button type="submit" class="bg-primary text-white px-5 py-2 rounded-lg font-bold">[[#{ads.filter.submit}]]</button>
+    </noscript>
+  </form>
+
+  <section id="ads-results">
+
+    <div class="flex items-center justify-between mb-4 text-sm text-gray-500" th:unless="${#lists.isEmpty(ads)}">
+      <span th:text="#{ads.list.results(${adsPage.totalElements})}">Wyniki: 3</span>
+      <a th:if="${criteria.filtered}" th:href="@{/ads}" class="text-primary hover:text-primaryHover font-bold">
+        <i class="ph ph-x"></i> [[#{ads.filter.clear}]]
+      </a>
+    </div>
+
+    <!-- If there are no listings -->
+    <div th:if="${#lists.isEmpty(ads)}" class="text-center py-20 bg-white rounded-2xl border border-dashed border-gray-300">
+      <i class="ph ph-ghost text-6xl text-gray-300 mb-4"></i>
+      <th:block th:if="${criteria.filtered}">
+        <h3 class="text-xl font-medium text-gray-600">[[#{ads.list.noMatches.title}]]</h3>
+        <p class="text-gray-400 mt-2 mb-6">[[#{ads.list.noMatches.text}]]</p>
+        <a th:href="@{/ads}" class="inline-block bg-primary hover:bg-primaryHover text-white px-6 py-3 rounded-full font-bold transition">[[#{ads.filter.clear}]]</a>
+      </th:block>
+      <th:block th:unless="${criteria.filtered}">
+        <h3 class="text-xl font-medium text-gray-600">[[#{ads.list.empty.title}]]</h3>
+        <p class="text-gray-400 mt-2">[[#{ads.list.empty.text}]]</p>
+      </th:block>
+    </div>
+
+    <!-- Listings grid -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6" th:unless="${#lists.isEmpty(ads)}">
+
+      <article th:each="ad : ${ads}"
+               class="bg-surface rounded-2xl shadow-sm hover:shadow-lg transition duration-300 overflow-hidden border border-gray-100 group cursor-pointer"
+               th:hx-get="@{/ads/{id}(id=${ad.id})}"
+               hx-target="#modal-container"
+               hx-swap="innerHTML">
+
+        <div class="relative h-48 overflow-hidden bg-gray-100 flex items-center justify-center">
+
+          <!-- Show the first photo from the collection if it is not empty -->
+          <img th:if="${ad.imageUrls != null and !ad.imageUrls.isEmpty()}"
+               th:src="${ad.imageUrls[0]}"
+               th:alt="#{common.image.animal}"
+               class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+
+          <!-- Placeholder when there are no photos -->
+          <i th:unless="${ad.imageUrls != null and !ad.imageUrls.isEmpty()}" class="ph ph-paw-print text-5xl text-gray-300"></i>
+
+          <!-- Category tag -->
+          <div class="absolute top-3 left-3 bg-white/90 backdrop-blur-sm px-2 py-1 rounded-md text-xs font-bold text-gray-700 shadow-sm" th:text="${@translationService.getOrDefault(ad.category.messageKey, ad.category.name)}">
+            Kategoria
+          </div>
+        </div>
+
+        <div class="p-5">
+          <h3 class="text-lg font-bold text-gray-800 mb-1 truncate" th:text="${ad.title}">Tytuł</h3>
+          <p class="text-sm text-gray-500 mb-2 flex items-center">
+            <i class="ph ph-map-pin mr-1 text-primary"></i> <span th:text="${ad.location}">Lokalizacja</span>
+          </p>
+          <!-- Short animal info (only what the author filled in) -->
+          <div class="flex flex-wrap gap-1 mb-1" th:if="${ad.sex != null or ad.age != null}">
+            <span th:if="${ad.sex != null}" class="text-[11px] bg-orange-50 text-primary px-2 py-0.5 rounded-md font-bold" th:text="#{${'animal.sex.' + ad.sex}}">Samiec</span>
+            <span th:if="${ad.age != null}" class="text-[11px] bg-orange-50 text-primary px-2 py-0.5 rounded-md font-bold" th:text="#{${'animal.age.' + ad.age}}">Dorosły</span>
+          </div>
+          <div class="flex items-center justify-between mt-4 pt-4 border-t border-gray-50">
+            <div class="flex items-center text-xs text-gray-500">
+              <div class="w-6 h-6 rounded-full bg-orange-100 text-primary flex items-center justify-center mr-2 font-bold uppercase"
+                   th:text="${#strings.substring(ad.author.displayName,0,1)}">A</div>
+              <span class="truncate max-w-[100px]" th:text="${ad.author.displayName}">Autor</span>
+            </div>
+            <span class="text-xs text-gray-400" th:text="${#temporals.format(ad.createdAt, 'dd.MM.yyyy')}">Data</span>
+          </div>
+        </div>
+      </article>
+
+    </div>
+
+    <!-- Pagination. hx-boost turns the links into HTMX requests that swap only the results; they still work without JS. -->
+    <nav th:if="${adsPage.totalPages > 1}" class="flex items-center justify-center gap-4 mt-10"
+         hx-boost="true" hx-target="#ads-results" hx-select="#ads-results" hx-swap="outerHTML show:window:top"
+         th:attr="aria-label=#{ads.pagination}">
+      <a th:if="${previousPageUrl}" th:href="${previousPageUrl}"
+         class="px-4 py-2 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 font-bold text-gray-700 transition flex items-center">
+        <i class="ph ph-caret-left mr-1"></i> [[#{ads.pagination.previous}]]
+      </a>
+      <span class="text-sm text-gray-500" th:text="#{ads.pagination.info(${adsPage.number + 1}, ${adsPage.totalPages})}">Strona 1 z 3</span>
+      <a th:if="${nextPageUrl}" th:href="${nextPageUrl}"
+         class="px-4 py-2 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 font-bold text-gray-700 transition flex items-center">
+        [[#{ads.pagination.next}]] <i class="ph ph-caret-right ml-1"></i>
+      </a>
+    </nav>
+  </section>
+</main>
+</body>
+</html>

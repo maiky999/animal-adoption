@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="content" class="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 md:p-10 fade-in" onclick="if(event.target === this) closeModal()">
+
+  <div class="bg-white rounded-2xl w-full max-w-5xl max-h-[95vh] overflow-hidden flex flex-col md:flex-row relative shadow-2xl">
+
+    <!-- Close button -->
+    <button onclick="closeModal()" class="absolute top-4 right-4 bg-white/80 backdrop-blur-md rounded-full p-2 text-gray-600 hover:text-black hover:bg-white z-50 shadow-sm transition">
+      <i class="ph ph-x text-xl"></i>
+    </button>
+
+    <!-- Photo gallery section -->
+    <div class="md:w-1/2 bg-gray-100 relative h-[40vh] md:h-auto overflow-hidden border-b md:border-b-0 md:border-r border-gray-200">
+
+      <!-- ONE photo -->
+      <div th:if="${#lists.size(ad.imageUrls) == 1}" class="absolute inset-0 w-full h-full">
+        <img th:src="${ad.imageUrls[0]}" th:alt="#{common.image.animal}" class="w-full h-full object-cover">
+      </div>
+
+      <!-- Multiple photos (carousel) -->
+      <div th:if="${#lists.size(ad.imageUrls) > 1}" class="absolute inset-0 w-full h-full group">
+        <div id="carousel-inner" class="flex w-full h-full transition-transform duration-500 ease-in-out cursor-grab active:cursor-grabbing" style="transform: translateX(0%);">
+          <div th:each="imgUrl : ${ad.imageUrls}" class="w-full h-full flex-shrink-0 relative">
+            <img th:src="${imgUrl}" th:alt="#{common.image.gallery}" class="w-full h-full object-cover">
+          </div>
+        </div>
+
+        <button type="button" onclick="prevSlide(event)" class="absolute left-4 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white text-gray-800 p-2 rounded-full shadow-md opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity z-10">
+          <i class="ph ph-caret-left text-2xl"></i>
+        </button>
+        <button type="button" onclick="nextSlide(event)" class="absolute right-4 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white text-gray-800 p-2 rounded-full shadow-md opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity z-10">
+          <i class="ph ph-caret-right text-2xl"></i>
+        </button>
+
+        <div class="absolute bottom-4 left-1/2 -translate-x-1/2 flex space-x-2 z-10 bg-black/30 px-3 py-2 rounded-full backdrop-blur-sm">
+          <button type="button" th:each="imgUrl, stat : ${ad.imageUrls}"
+                  th:onclick="'goToSlide(event, ' + ${stat.index} + ')'"
+                  class="w-2 h-2 rounded-full transition-all duration-300 carousel-dot"
+                  th:classappend="${stat.index == 0} ? 'bg-white scale-125' : 'bg-white/50 hover:bg-white/80'">
+          </button>
+        </div>
+
+        <script th:inline="javascript">
+                        (function() {
+                            const totalSlides = /*[[${#lists.size(ad.imageUrls)}]]*/ 0;
+                            window.currentCarouselIndex = 0;
+
+                            window.prevSlide = function(e) {
+                                if(e) e.stopPropagation();
+                                window.currentCarouselIndex = (window.currentCarouselIndex === 0) ? totalSlides - 1 : window.currentCarouselIndex - 1;
+                                updateCarousel();
+                            };
+
+                            window.nextSlide = function(e) {
+                                if(e) e.stopPropagation();
+                                window.currentCarouselIndex = (window.currentCarouselIndex === totalSlides - 1) ? 0 : window.currentCarouselIndex + 1;
+                                updateCarousel();
+                            };
+
+                            window.goToSlide = function(e, index) {
+                                if(e) e.stopPropagation();
+                                window.currentCarouselIndex = index;
+                                updateCarousel();
+                            };
+
+                            function updateCarousel() {
+                                const inner = document.getElementById('carousel-inner');
+                                if(inner) {
+                                    inner.style.transform = `translateX(-${window.currentCarouselIndex * 100}%)`;
+                                }
+
+                                const dots = document.querySelectorAll('.carousel-dot');
+                                dots.forEach((dot, index) => {
+                                    if(index === window.currentCarouselIndex) {
+                                        dot.classList.remove('bg-white/50', 'hover:bg-white/80');
+                                        dot.classList.add('bg-white', 'scale-125');
+                                    } else {
+                                        dot.classList.remove('bg-white', 'scale-125');
+                                        dot.classList.add('bg-white/50', 'hover:bg-white/80');
+                                    }
+                                });
+                            }
+                        })();
+                    </script>
+      </div>
+
+      <!-- No photos -->
+      <div th:if="${#lists.isEmpty(ad.imageUrls)}" class="absolute inset-0 flex flex-col items-center justify-center text-gray-300">
+        <i class="ph ph-paw-print text-8xl mb-4"></i>
+        <p class="font-medium">[[#{ads.modal.noImages}]]</p>
+      </div>
+    </div>
+
+    <!-- Right column (listing content OR adoption form) -->
+    <div class="md:w-1/2 flex flex-col h-[60vh] md:h-auto md:min-h-[600px] relative overflow-hidden">
+
+      <!-- VIEW: Listing details -->
+      <div id="ad-details-view" class="flex flex-col h-full transition-transform duration-500 w-full bg-white z-10">
+        <div class="p-8 flex-grow overflow-y-auto">
+          <div class="mb-3 flex flex-wrap items-center justify-between gap-2 pr-12">
+            <span class="bg-orange-100 text-primary text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider" th:text="${@translationService.getOrDefault(ad.category.messageKey, ad.category.name)}">Kategoria</span>
+            <span class="text-gray-400 text-sm font-medium whitespace-nowrap" th:text="${#temporals.format(ad.createdAt, 'dd.MM.yyyy')}">Data</span>
+          </div>
+
+          <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-4 leading-tight pr-8" th:text="${ad.title}">Tytuł ogłoszenia</h2>
+
+          <p class="text-gray-600 mb-6 flex items-center font-medium">
+            <i class="ph-fill ph-map-pin mr-2 text-primary text-xl"></i>
+            <span th:text="${ad.location}">Lokalizacja</span>
+          </p>
+
+          <!-- Information about the animal (only what the author filled in) -->
+          <div th:if="${ad.hasAnimalDetails()}" class="mb-6">
+            <h3 class="text-sm font-bold text-gray-400 uppercase tracking-wider mb-2">[[#{ads.modal.animal}]]</h3>
+            <dl class="grid grid-cols-3 gap-2 mb-3" th:if="${ad.age != null or ad.sex != null or ad.size != null}">
+              <div th:if="${ad.age != null}" class="bg-gray-50 rounded-xl p-2 text-center">
+                <dt class="text-[10px] text-gray-400 uppercase font-bold">[[#{animal.age}]]</dt>
+                <dd class="text-sm font-bold text-gray-700" th:text="#{${'animal.age.' + ad.age}}">Dorosły</dd>
+              </div>
+              <div th:if="${ad.sex != null}" class="bg-gray-50 rounded-xl p-2 text-center">
+                <dt class="text-[10px] text-gray-400 uppercase font-bold">[[#{animal.sex}]]</dt>
+                <dd class="text-sm font-bold text-gray-700" th:text="#{${'animal.sex.' + ad.sex}}">Samiec</dd>
+              </div>
+              <div th:if="${ad.size != null}" class="bg-gray-50 rounded-xl p-2 text-center">
+                <dt class="text-[10px] text-gray-400 uppercase font-bold">[[#{animal.size}]]</dt>
+                <dd class="text-sm font-bold text-gray-700" th:text="#{${'animal.size.' + ad.size}}">Średni</dd>
+              </div>
+            </dl>
+            <ul class="flex flex-wrap gap-2" th:if="${ad.hasAnyFeature()}">
+              <li th:if="${ad.vaccinated == true}" class="text-xs bg-green-50 text-green-700 border border-green-200 px-2 py-1 rounded-full font-bold"><i class="ph-bold ph-check"></i> [[#{animal.feature.vaccinated}]]</li>
+              <li th:if="${ad.sterilized == true}" class="text-xs bg-green-50 text-green-700 border border-green-200 px-2 py-1 rounded-full font-bold"><i class="ph-bold ph-check"></i> [[#{animal.feature.sterilized}]]</li>
+              <li th:if="${ad.chipped == true}" class="text-xs bg-green-50 text-green-700 border border-green-200 px-2 py-1 rounded-full font-bold"><i class="ph-bold ph-check"></i> [[#{animal.feature.chipped}]]</li>
+              <li th:if="${ad.goodWithKids == true}" class="text-xs bg-green-50 text-green-700 border border-green-200 px-2 py-1 rounded-full font-bold"><i class="ph-bold ph-check"></i> [[#{animal.feature.goodWithKids}]]</li>
+              <li th:if="${ad.goodWithAnimals == true}" class="text-xs bg-green-50 text-green-700 border border-green-200 px-2 py-1 rounded-full font-bold"><i class="ph-bold ph-check"></i> [[#{animal.feature.goodWithAnimals}]]</li>
+            </ul>
+          </div>
+
+          <h3 class="text-sm font-bold text-gray-400 uppercase tracking-wider mb-2">[[#{ads.modal.description}]]</h3>
+          <div class="prose text-gray-700 leading-relaxed whitespace-pre-wrap" th:text="${ad.description}">
+            Opis...
+          </div>
+
+          <!-- Removed by a moderator (visible only to the author, moderators and people who talked about it) -->
+          <div th:if="${ad.status.name() == 'REMOVED'}" class="mt-6 bg-gray-100 border border-gray-300 text-gray-700 p-4 rounded-xl text-sm">
+            <p class="font-bold flex items-center"><i class="ph-fill ph-trash mr-2"></i> [[#{ads.modal.removed}]]</p>
+            <p th:if="${ad.removalReason != null}" class="mt-1 whitespace-pre-wrap" th:text="${ad.removalReason}">Powód</p>
+          </div>
+
+          <!-- Moderation: removing the listing with a reason (moderators and administrators) -->
+          <details th:if="${viewerIsModerator == true and ad.status.name() != 'REMOVED'}"
+                   class="mt-8 border border-red-200 rounded-xl p-4 bg-red-50/50">
+            <summary class="cursor-pointer list-none text-sm font-bold text-red-700 flex items-center">
+              <i class="ph-bold ph-trash mr-2"></i> [[#{moderation.ads.remove}]]
+            </summary>
+            <form th:action="@{/moderation/ads/{id}/remove(id=${ad.id})}" method="post" class="mt-3 space-y-2">
+              <label th:for="'remove-reason-' + ${ad.id}" class="block text-xs font-bold text-gray-700">[[#{moderation.ads.remove.reason}]]</label>
+              <textarea th:id="'remove-reason-' + ${ad.id}" name="reason" rows="3" required maxlength="500"
+                        th:placeholder="#{moderation.ads.remove.reason.placeholder}"
+                        class="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm focus:ring-2 focus:ring-red-400 focus:border-red-400 outline-none resize-none bg-white"></textarea>
+              <button type="submit" class="w-full bg-red-600 hover:bg-red-700 text-white py-2 rounded-xl text-sm font-bold transition">
+                [[#{moderation.ads.remove.confirm}]]
+              </button>
+            </form>
+          </details>
+        </div>
+
+        <!-- Footer with profile (visible only in listing details) -->
+        <div class="px-8 py-6 bg-gray-50 border-t border-gray-100 mt-auto">
+          <div class="flex items-center justify-between mb-5">
+            <div class="flex items-center">
+              <a th:href="@{/users/{id}(id=${ad.author.id})}" class="flex items-center group cursor-pointer transition">
+                <div class="w-12 h-12 rounded-full bg-orange-100 text-primary flex items-center justify-center font-bold text-xl mr-3 shadow-sm uppercase group-hover:bg-primary group-hover:text-white transition-colors overflow-hidden">
+                  <img th:if="${ad.author.avatarUrl != null}" th:src="${ad.author.avatarUrl}" alt="Avatar" class="w-full h-full object-cover">
+                  <span th:unless="${ad.author.avatarUrl != null}" th:text="${#strings.substring(ad.author.displayName,0,1)}">A</span>
+                </div>
+                <div class="flex flex-col justify-center">
+                  <div class="flex items-center">
+                    <p class="font-bold text-gray-800 group-hover:text-primary transition-colors mr-2" th:text="${ad.author.displayName}">Nazwa Autora</p>
+
+                    <span th:if="${ad.author.userType != null and ad.author.userType.name() == 'ORGANIZATION'}"
+                          class="text-[10px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded-md uppercase font-bold tracking-wider" th:title="#{ads.modal.badge.organization.title}">
+                            [[#{ads.modal.badge.organization}]]
+                        </span>
+                    <span th:if="${ad.author.userType != null and ad.author.userType.name() == 'PRIVATE'}"
+                          class="text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-md uppercase font-bold tracking-wider" th:title="#{ads.modal.badge.private.title}">
+                            [[#{ads.modal.badge.private}]]
+                        </span>
+                  </div>
+                  <p class="text-xs text-gray-500 mt-0.5">[[#{ads.modal.viewProfile}]]</p>
+                </div>
+              </a>
+            </div>
+          </div>
+
+          <div th:unless="${#authorization.expression('isAuthenticated()') and #authentication.name == ad.author.email}" class="flex space-x-3">
+
+            <!-- PRIVATE ACCOUNT (chat requires login) -->
+            <a th:if="${ad.author.userType == null or ad.author.userType.name() == 'PRIVATE'}"
+               th:href="@{/messages/{adId}/{userId}(adId=${ad.id}, userId=${ad.author.id})}"
+               class="flex-1 bg-primary hover:bg-primaryHover text-white py-3 px-4 rounded-xl font-bold transition shadow-md flex justify-center items-center cursor-pointer">
+              <i class="ph ph-chat-teardrop-dots text-xl mr-2"></i> [[#{common.sendMessage}]]
+            </a>
+
+            <!-- ORGANIZATION ACCOUNT (pre-adoption questionnaire without login) -->
+            <button th:if="${ad.author.userType != null and ad.author.userType.name() == 'ORGANIZATION'}"
+                    type="button"
+                    onclick="document.getElementById('ad-details-view').classList.add('-translate-x-full'); document.getElementById('ad-form-view').classList.remove('translate-x-full');"
+                    class="flex-1 bg-primary hover:bg-primaryHover text-white py-3 px-4 rounded-xl font-bold transition shadow-md flex justify-center items-center cursor-pointer">
+              <i class="ph ph-clipboard-text text-xl mr-2"></i> [[#{ads.modal.fillSurvey}]]
+            </button>
+
+            <!-- Call -->
+            <a th:if="${ad.author.mobile != null}" th:href="'tel:' + ${ad.author.mobile}" class="bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 p-3 w-14 rounded-xl transition shadow-sm flex items-center justify-center" th:title="#{ads.modal.call}">
+              <i class="ph ph-phone text-2xl text-primary"></i>
+            </a>
+          </div>
+
+          <div th:if="${#authorization.expression('isAuthenticated()') and #authentication.name == ad.author.email}">
+            <div class="w-full bg-gray-200/50 text-gray-500 py-3 px-4 rounded-xl font-medium flex items-center justify-center border border-gray-200">
+              <i class="ph ph-info text-xl mr-2"></i> [[#{ads.modal.ownPreview}]]
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- VIEW: Pre-adoption form (organizations) -->
+      <div id="ad-form-view" class="flex flex-col h-full transition-transform duration-500 absolute inset-0 w-full bg-white z-20 translate-x-full overflow-y-auto">
+
+        <div class="bg-gray-50 px-6 py-4 border-b border-gray-200 sticky top-0 z-30 flex items-center">
+          <button type="button" onclick="document.getElementById('ad-form-view').classList.add('translate-x-full'); document.getElementById('ad-details-view').classList.remove('-translate-x-full');"
+                  class="mr-4 w-10 h-10 rounded-full bg-white border border-gray-200 flex items-center justify-center hover:bg-gray-100 transition shadow-sm">
+            <i class="ph ph-arrow-left text-xl"></i>
+          </button>
+          <div>
+            <h3 class="font-bold text-gray-800 leading-tight">[[#{adoption.form.title}]]</h3>
+            <p class="text-xs text-gray-500">[[#{adoption.form.forOrganization}]] <span class="font-bold" th:text="${ad.author.displayName}">Fundacja</span></p>
+          </div>
+        </div>
+
+        <div class="p-6 md:p-8" id="form-response-container">
+          <div th:fragment="form-response">
+
+            <!-- Form feedback messages -->
+            <div th:if="${formError}" class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl mb-6 text-sm flex items-start shadow-sm fade-in">
+              <i class="ph-fill ph-warning-circle text-xl mr-2 mt-0.5"></i>
+              <span th:text="#{${formError}}">Błąd formularza</span>
+            </div>
+
+            <div th:if="${formSuccess}" class="bg-green-50 border border-green-200 text-green-700 px-6 py-8 rounded-2xl text-center shadow-sm fade-in">
+              <div class="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                <i class="ph-bold ph-check text-3xl"></i>
+              </div>
+              <h3 class="text-xl font-bold mb-2">[[#{adoption.form.success.title}]]</h3>
+              <p class="text-sm font-medium" th:text="#{${formSuccess}}">Wysłano pomyślnie.</p>
+              <button type="button" onclick="closeModal()" class="mt-6 bg-white border border-green-200 text-green-700 px-6 py-2 rounded-full font-bold hover:bg-green-100 transition">
+                [[#{adoption.form.close}]]
+              </button>
+            </div>
+
+            <!-- The actual form -->
+            <form th:unless="${formSuccess}"
+                  th:action="@{/ads/{id}/adoption-form(id=${ad.id})}"
+                  method="post"
+                  th:attr="hx-post=@{/ads/{id}/adoption-form(id=${ad.id})}"
+                  hx-target="#form-response-container"
+                  hx-swap="innerHTML"
+                  class="space-y-4">
+
+              <!-- CSRF support added, which Spring Security requires by default for POST requests -->
+              <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" th:if="${_csrf != null}"/>
+
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-xs font-bold text-gray-700 mb-1">[[#{adoption.form.firstName}]]</label>
+                  <input type="text" name="firstName" required class="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-primary focus:border-primary outline-none transition text-sm">
+                </div>
+                <div>
+                  <label class="block text-xs font-bold text-gray-700 mb-1">[[#{adoption.form.lastName}]]</label>
+                  <input type="text" name="lastName" required class="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-primary focus:border-primary outline-none transition text-sm">
+                </div>
+              </div>
+
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-xs font-bold text-gray-700 mb-1">[[#{adoption.form.address}]]</label>
+                  <input type="text" name="address" required class="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-primary focus:border-primary outline-none transition text-sm">
+                </div>
+                <div>
+                  <label class="block text-xs font-bold text-gray-700 mb-1">[[#{adoption.form.city}]]</label>
+                  <input type="text" name="city" required class="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-primary focus:border-primary outline-none transition text-sm">
+                </div>
+              </div>
+
+              <div>
+                <label class="block text-xs font-bold text-gray-700 mb-1">[[#{adoption.form.email}]]</label>
+                <input type="email" name="email" required class="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-primary focus:border-primary outline-none transition text-sm">
+              </div>
+
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-xs font-bold text-gray-700 mb-1">[[#{adoption.form.phone}]]</label>
+                  <input type="text" name="phone" pattern="\d{9}" required class="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-primary focus:border-primary outline-none transition text-sm">
+                </div>
+                <div>
+                  <label class="block text-xs font-bold text-gray-700 mb-1">[[#{adoption.form.birthYear}]]</label>
+                  <input type="number" name="birthYear" min="1900" max="2010" required class="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-primary focus:border-primary outline-none transition text-sm">
+                </div>
+              </div>
+
+              <div class="mt-6 pt-4 border-t border-gray-100">
+                <label class="flex items-start cursor-pointer group">
+                  <input type="checkbox" name="consent" required class="mt-1 w-4 h-4 text-primary bg-gray-100 border-gray-300 rounded focus:ring-primary flex-shrink-0 cursor-pointer">
+                  <span class="ml-3 text-[10px] text-gray-500 text-justify group-hover:text-gray-700 transition leading-tight">
+                                  [[#{adoption.form.consent}]]
+                              </span>
+                </label>
+              </div>
+
+              <div class="pt-4 mt-4">
+                <button type="submit" class="w-full bg-primary hover:bg-primaryHover text-white py-3.5 px-4 rounded-xl font-bold transition shadow-md flex justify-center items-center">
+                  <i class="ph-bold ph-paper-plane-right mr-2 text-xl"></i> [[#{adoption.form.submit}]]
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+</body>
+</html>

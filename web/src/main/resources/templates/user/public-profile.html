@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="pl" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/base :: layout(~{::main})}">
+<body>
+<main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 w-full flex-grow relative">
+
+    <!-- PROFILE HEADER (business card) -->
+    <div class="bg-white rounded-3xl p-8 md:p-10 shadow-sm border border-gray-100 mb-10 flex flex-col md:flex-row items-center md:items-start gap-8 relative overflow-hidden">
+        <!-- Decorative background -->
+        <div class="absolute top-0 right-0 w-64 h-64 bg-orange-50 rounded-full blur-3xl -z-10 translate-x-1/3 -translate-y-1/3"></div>
+
+        <!-- Avatar with profile picture support -->
+        <div class="w-32 h-32 rounded-full bg-primary text-white flex items-center justify-center font-bold text-5xl shadow-lg uppercase flex-shrink-0 overflow-hidden relative">
+            <img th:if="${profileUser.avatarUrl != null}" th:src="${profileUser.avatarUrl}" alt="Avatar" class="w-full h-full object-cover">
+            <span th:unless="${profileUser.avatarUrl != null}" th:text="${#strings.substring(profileUser.displayName,0,1)}">A</span>
+        </div>
+
+        <!-- Information -->
+        <div class="flex-grow text-center md:text-left">
+            <div class="flex flex-col md:flex-row items-center gap-3 mb-2">
+                <h2 class="text-3xl font-bold text-gray-800" th:text="${profileUser.displayName}">Nazwa Użytkownika</h2>
+
+                <!-- NEW: User type badge -->
+                <span th:if="${profileUser.userType != null and profileUser.userType.name() == 'ORGANIZATION'}"
+                      class="bg-blue-100 text-blue-700 text-xs px-3 py-1 rounded-full font-bold uppercase tracking-wider flex items-center shadow-sm">
+                    <i class="ph-fill ph-buildings mr-1 text-base"></i> [[#{publicProfile.badge.organization}]]
+                </span>
+                <span th:if="${profileUser.userType != null and profileUser.userType.name() == 'PRIVATE'}"
+                      class="bg-green-100 text-green-700 text-xs px-3 py-1 rounded-full font-bold uppercase tracking-wider flex items-center shadow-sm">
+                    <i class="ph-fill ph-user mr-1 text-base"></i> [[#{publicProfile.badge.private}]]
+                </span>
+            </div>
+
+            <!-- Optional description, "Zaufany opiekun" (Trusted caretaker) by default -->
+            <p th:if="${profileUser.description == null or profileUser.description.isEmpty()}" class="text-gray-500 mb-6 flex items-center justify-center md:justify-start">
+                <i class="ph-fill ph-paw-print text-primary mr-2"></i> [[#{publicProfile.trusted}]]
+            </p>
+            <p th:unless="${profileUser.description == null or profileUser.description.isEmpty()}" class="text-gray-600 mb-6 italic whitespace-pre-wrap" th:text="${profileUser.description}">
+                Opis użytkownika...
+            </p>
+
+            <div class="flex flex-wrap justify-center md:justify-start gap-4">
+
+                <button onclick="document.getElementById('ads-section').scrollIntoView({ behavior: 'smooth' });" class="bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-700 py-2 px-5 rounded-xl text-sm font-bold transition flex items-center shadow-sm">
+                    <i class="ph-fill ph-chat-teardrop-dots mr-2 text-lg text-primary"></i> [[#{common.sendMessage}]]
+                </button>
+
+                <a th:if="${profileUser.mobile != null}" th:href="'tel:' + ${profileUser.mobile}" class="bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-700 py-2 px-5 rounded-xl text-sm font-bold transition flex items-center shadow-sm">
+                    <i class="ph-fill ph-phone mr-2 text-lg text-primary"></i>
+                    <span th:text="${profileUser.mobile}">123456789</span>
+                </a>
+            </div>
+        </div>
+
+        <!-- Statistics -->
+        <div class="bg-orange-50 p-6 rounded-2xl text-center min-w-[150px] shadow-inner flex-shrink-0 mt-4 md:mt-0">
+            <span class="block text-4xl font-black text-primary mb-1" th:text="${#lists.size(ads)}">0</span>
+            <span class="text-xs font-bold text-gray-600 uppercase tracking-wider">[[#{publicProfile.activeAds.line1}]]<br>[[#{publicProfile.activeAds.line2}]]</span>
+        </div>
+    </div>
+
+    <!-- MODERATION PANEL: blocking the account (visible only to moderators and administrators) -->
+    <section sec:authorize="hasAnyRole('MODERATOR', 'ADMIN')" class="bg-white rounded-3xl p-6 md:p-8 shadow-sm border border-red-200 mb-10">
+        <h3 class="text-xl font-bold text-gray-800 flex items-center mb-4">
+            <i class="ph-fill ph-shield-check text-red-500 text-2xl mr-2"></i> [[#{moderation.users.title}]]
+        </h3>
+
+        <!-- Moderator and administrator accounts cannot be blocked from here -->
+        <p th:if="${profileUser.staff}" class="text-sm text-gray-500">[[#{moderation.users.staff}]]</p>
+
+        <th:block th:unless="${profileUser.staff}">
+            <!-- Current ban -->
+            <div th:if="${profileUser.banned}" class="bg-red-50 border border-red-200 text-red-700 p-4 rounded-xl text-sm mb-5 flex flex-col sm:flex-row sm:items-center gap-3">
+                <div class="flex-grow">
+                    <p class="font-bold" th:text="#{moderation.users.bannedUntil(${#temporals.format(profileUser.bannedUntil, 'dd.MM.yyyy HH:mm')})}">Konto zablokowane do ...</p>
+                    <p class="mt-1"><strong>[[#{login.banned.reason}]]</strong> <span class="whitespace-pre-wrap" th:text="${profileUser.banReason}">Powód</span></p>
+                </div>
+                <form th:action="@{/moderation/users/{id}/unban(id=${profileUser.id})}" method="post">
+                    <button type="submit" class="bg-white border border-red-300 hover:bg-red-100 text-red-700 px-4 py-2 rounded-xl font-bold transition whitespace-nowrap">
+                        <i class="ph-bold ph-lock-open mr-1"></i> [[#{moderation.users.unban}]]
+                    </button>
+                </form>
+            </div>
+
+            <!-- Blocking (or changing the current ban - a new ban replaces the previous one) -->
+            <form th:action="@{/moderation/users/{id}/ban(id=${profileUser.id})}" method="post" class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                <div class="md:col-span-3">
+                    <label for="ban-reason" class="block text-xs font-bold text-gray-700 mb-1">[[#{moderation.users.ban.reason}]]</label>
+                    <textarea id="ban-reason" name="reason" rows="2" required maxlength="500"
+                              th:placeholder="#{moderation.users.ban.reason.placeholder}"
+                              class="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm focus:ring-2 focus:ring-red-400 focus:border-red-400 outline-none resize-none"></textarea>
+                </div>
+                <div>
+                    <label for="ban-hours" class="block text-xs font-bold text-gray-700 mb-1">[[#{moderation.users.ban.hours}]]</label>
+                    <input id="ban-hours" type="number" name="hours" value="24" min="1" required
+                           th:attr="max=${maxBanHours}"
+                           class="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm focus:ring-2 focus:ring-red-400 focus:border-red-400 outline-none">
+                </div>
+                <div class="md:col-span-4 flex flex-col sm:flex-row sm:items-center gap-3">
+                    <p class="text-xs text-gray-500 flex-grow">[[#{moderation.users.ban.hint}]]</p>
+                    <button type="submit" class="bg-red-600 hover:bg-red-700 text-white px-5 py-2 rounded-xl font-bold transition whitespace-nowrap">
+                        <i class="ph-bold ph-prohibit mr-1"></i>
+                        <span th:text="${profileUser.banned} ? #{moderation.users.ban.change} : #{moderation.users.ban.submit}">Zablokuj konto</span>
+                    </button>
+                </div>
+            </form>
+        </th:block>
+
+        <!-- ADMINISTRATOR PANEL: changing the role (not on one's own profile - see UserService.changeUserRole) -->
+        <div sec:authorize="hasRole('ADMIN')" th:if="${#authentication.name != profileUser.email}"
+             class="mt-6 pt-6 border-t border-gray-200">
+            <h4 class="text-base font-bold text-gray-800 flex items-center mb-3">
+                <i class="ph-fill ph-crown text-amber-500 text-xl mr-2"></i> [[#{moderation.users.role.title}]]
+            </h4>
+            <form th:action="@{/admin/users/{id}/role(id=${profileUser.id})}" method="post"
+                  class="flex flex-col sm:flex-row sm:items-end gap-3">
+                <div class="sm:w-64">
+                    <label for="user-role" class="block text-xs font-bold text-gray-700 mb-1">[[#{moderation.users.role.label}]]</label>
+                    <select id="user-role" name="role"
+                            class="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm bg-white focus:ring-2 focus:ring-amber-400 focus:border-amber-400 outline-none">
+                        <option th:each="r : ${roles}" th:value="${r.name()}" th:selected="${r == profileUser.role}"
+                                th:text="#{${'moderation.users.role.name.' + r.name()}}">Użytkownik</option>
+                    </select>
+                </div>
+                <button type="submit" class="bg-amber-500 hover:bg-amber-600 text-white px-5 py-2 rounded-xl font-bold transition whitespace-nowrap">
+                    <i class="ph-bold ph-check mr-1"></i> [[#{moderation.users.role.submit}]]
+                </button>
+                <p class="text-xs text-gray-500 sm:flex-grow">[[#{moderation.users.role.hint}]]</p>
+            </form>
+        </div>
+    </section>
+
+    <div id="ads-section" class="mb-8 border-b border-gray-200 pb-5 pt-4">
+        <h3 class="text-2xl font-bold text-gray-800">[[#{publicProfile.ads.title}]]</h3>
+        <p class="text-gray-500 mt-2 text-sm">[[#{publicProfile.ads.hint}]]</p>
+    </div>
+
+    <!-- No listings -->
+    <div th:if="${#lists.isEmpty(ads)}" class="text-center py-20 bg-white rounded-2xl border border-dashed border-gray-300">
+        <i class="ph ph-magnifying-glass text-6xl text-gray-300 mb-4"></i>
+        <h3 class="text-xl font-medium text-gray-600">[[#{publicProfile.ads.empty.title}]]</h3>
+        <p class="text-gray-400 mt-2">[[#{publicProfile.ads.empty.text}]]</p>
+    </div>
+
+    <!-- Listings grid -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6" th:unless="${#lists.isEmpty(ads)}">
+
+        <article th:each="ad : ${ads}" class="bg-surface rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col transition hover:shadow-md">
+
+            <div class="relative h-48 bg-gray-100 flex-shrink-0 cursor-pointer group overflow-hidden"
+                 th:hx-get="@{/ads/{id}(id=${ad.id})}"
+                 hx-target="#modal-container"
+                 hx-swap="innerHTML">
+
+                <img th:if="${not #lists.isEmpty(ad.imageUrls)}" th:src="${ad.imageUrls[0]}" th:alt="#{common.image.generic}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+                <div th:if="${#lists.isEmpty(ad.imageUrls)}" class="w-full h-full flex items-center justify-center text-gray-300 group-hover:scale-105 transition-transform duration-500">
+                    <i class="ph ph-paw-print text-5xl"></i>
+                </div>
+
+                <div class="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center z-10">
+                    <div class="bg-white/95 text-gray-800 px-5 py-2 rounded-full font-bold flex items-center shadow-lg transform translate-y-4 group-hover:translate-y-0 transition-all duration-300">
+                        <i class="ph text-xl ph-eye mr-2 text-primary"></i> [[#{common.preview}]]
+                    </div>
+                </div>
+            </div>
+
+            <div class="p-5 flex-grow flex flex-col">
+                <span class="text-xs font-bold text-primary uppercase tracking-wider mb-1" th:text="${@translationService.getOrDefault(ad.category.messageKey, ad.category.name)}">Kategoria</span>
+
+                <h3 class="text-lg font-bold text-gray-800 mb-2 leading-tight line-clamp-2 cursor-pointer hover:text-primary transition-colors"
+                    th:hx-get="@{/ads/{id}(id=${ad.id})}"
+                    hx-target="#modal-container"
+                    hx-swap="innerHTML"
+                    th:text="${ad.title}">Tytuł</h3>
+
+                <p class="text-sm text-gray-500 mb-4 flex items-center">
+                    <i class="ph-fill ph-map-pin mr-1 text-primary"></i> <span th:text="${ad.location}">Lokalizacja</span>
+                </p>
+
+                <div class="mt-auto pt-4 border-t border-gray-100 flex justify-between items-center">
+                    <span class="text-xs text-gray-400 font-medium" th:text="${#temporals.format(ad.createdAt, 'dd.MM.yyyy')}">Data</span>
+                </div>
+            </div>
+        </article>
+
+    </div>
+</main>
+</body>
+</html>

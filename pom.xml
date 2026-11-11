@@ -8,95 +8,53 @@
 		<version>4.0.1</version>
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
+
+	<!--
+		Parent project (aggregator). It contains no code - it ties the modules together:
+		  - translations : separate project with translations (i18n) and the TranslationService
+		  - domain       : data layer - JPA entities, enums, repositories, domain exceptions
+		  - core         : business logic - services, DTOs, RabbitMQ events and queues
+		  - web          : web application (Łapka portal) - controllers, views, configuration, main class
+
+		Dependencies between modules go in one direction only:  web -> core -> domain
+		Maven enforces this at compile time - e.g. a service from the core module cannot use a controller from web,
+		because core does not have the web module in its dependencies.
+	-->
 	<groupId>com.wsb</groupId>
-	<artifactId>animal-adoption</artifactId>
+	<artifactId>animaladoption-parent</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-	<name>animal-adoption</name>
-	<description>Portal do adopcji zwierząt</description>
-	<url/>
-	<licenses>
-		<license/>
-	</licenses>
-	<developers>
-		<developer/>
-	</developers>
-	<scm>
-		<connection/>
-		<developerConnection/>
-		<tag/>
-		<url/>
-	</scm>
+	<packaging>pom</packaging>
+	<name>animal-adoption-parent</name>
+	<description>Animal adoption portal - parent project</description>
+
+	<modules>
+		<module>translations</module>
+		<module>domain</module>
+		<module>core</module>
+		<module>web</module>
+	</modules>
+
 	<properties>
 		<java.version>21</java.version>
 	</properties>
-	<dependencies>
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-data-jpa</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-thymeleaf</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-webmvc</artifactId>
-		</dependency>
 
-		<dependency>
-			<groupId>org.postgresql</groupId>
-			<artifactId>postgresql</artifactId>
-			<scope>runtime</scope>
-		</dependency>
-		<dependency>
-			<groupId>org.projectlombok</groupId>
-			<artifactId>lombok</artifactId>
-			<optional>true</optional>
-		</dependency>
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-data-jpa-test</artifactId>
-			<scope>test</scope>
-		</dependency>
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-thymeleaf-test</artifactId>
-			<scope>test</scope>
-		</dependency>
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-webmvc-test</artifactId>
-			<scope>test</scope>
-		</dependency>
-	</dependencies>
-
-	<build>
-		<plugins>
-			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-compiler-plugin</artifactId>
-				<configuration>
-					<annotationProcessorPaths>
-						<path>
-							<groupId>org.projectlombok</groupId>
-							<artifactId>lombok</artifactId>
-						</path>
-					</annotationProcessorPaths>
-				</configuration>
-			</plugin>
-			<plugin>
-				<groupId>org.springframework.boot</groupId>
-				<artifactId>spring-boot-maven-plugin</artifactId>
-				<configuration>
-					<excludes>
-						<exclude>
-							<groupId>org.projectlombok</groupId>
-							<artifactId>lombok</artifactId>
-						</exclude>
-					</excludes>
-				</configuration>
-			</plugin>
-		</plugins>
-	</build>
-
+	<dependencyManagement>
+		<dependencies>
+			<dependency>
+				<groupId>com.wsb</groupId>
+				<artifactId>animaladoption-translations</artifactId>
+				<version>${project.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>com.wsb</groupId>
+				<artifactId>animaladoption-domain</artifactId>
+				<version>${project.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>com.wsb</groupId>
+				<artifactId>animaladoption-core</artifactId>
+				<version>${project.version}</version>
+			</dependency>
+		</dependencies>
+	</dependencyManagement>
 </project>

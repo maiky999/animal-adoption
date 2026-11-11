@@ -1,0 +1,131 @@
+# Production / demo deployment on a VPS: application + SQL Server + RabbitMQ + Caddy (HTTPS).
+# Usage (on the server, in the repository directory, with a filled-in .env file - see .env.production.example):
+#   docker compose -f docker-compose.prod.yml up -d --build
+#
+# Only Caddy is reachable from the internet (ports 80 and 443). The application, the database and RabbitMQ
+# talk to each other over the internal Docker network and publish no ports at all.
+#
+# ${VAR:?message} - Compose refuses to start when a required variable is missing from .env,
+# instead of starting the application with an empty password.
+
+# Log rotation - without it Docker keeps container logs forever and they can fill the server's disk
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  mssql:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    restart: unless-stopped
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "${DB_PASSWORD:?Set DB_PASSWORD in .env}"
+      # Express edition - free, also for production use (Developer may be used only for development and testing)
+      MSSQL_PID: "Express"
+      # Keeps SQL Server from taking all of the server's memory (it needs at least 2 GB)
+      MSSQL_MEMORY_LIMIT_MB: "2048"
+      # Password for sqlcmd in the healthcheck - read from the environment, so it is not visible in the command
+      SQLCMDPASSWORD: "${DB_PASSWORD}"
+    volumes:
+      - mssql-data:/var/opt/mssql
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -C -Q 'SELECT 1'"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+      start_period: 90s
+    logging: *logging
+
+  # One-off container: creates the database if it does not exist yet, then exits
+  mssql-init:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    depends_on:
+      mssql:
+        condition: service_healthy
+    environment:
+      SQLCMDPASSWORD: "${DB_PASSWORD}"
+    command: >
+      /opt/mssql-tools18/bin/sqlcmd -S mssql -U sa -C -b
+      -Q "IF DB_ID('${DB_NAME:-animaladoption}') IS NULL CREATE DATABASE [${DB_NAME:-animaladoption}]"
+    logging: *logging
+
+  rabbitmq:
+    # Without the management panel - it is not needed on the server
+    image: rabbitmq:3.13-alpine
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: "${RABBITMQ_USER:?Set RABBITMQ_USER in .env}"
+      RABBITMQ_DEFAULT_PASS: "${RABBITMQ_PASSWORD:?Set RABBITMQ_PASSWORD in .env}"
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    # Generous times: on a small VM (burstable B-series CPU) the first start, together with SQL Server,
+    # can take long, and the rabbitmq-diagnostics tool itself needs a few seconds to run
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 30s
+      retries: 10
+      start_period: 90s
+    logging: *logging
+
+  app:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      mssql-init:
+        condition: service_completed_successfully
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      # Addresses of the other containers on the internal network
+      DB_HOST: mssql
+      DB_PORT: "1433"
+      DB_NAME: "${DB_NAME:-animaladoption}"
+      DB_USER: sa
+      DB_PASSWORD: "${DB_PASSWORD}"
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: "5672"
+      RABBITMQ_USER: "${RABBITMQ_USER}"
+      RABBITMQ_PASSWORD: "${RABBITMQ_PASSWORD}"
+      MAIL_USERNAME: "${MAIL_USERNAME:?Set MAIL_USERNAME in .env}"
+      MAIL_PASSWORD: "${MAIL_PASSWORD:?Set MAIL_PASSWORD in .env}"
+      REMEMBER_ME_KEY: "${REMEMBER_ME_KEY:?Set REMEMBER_ME_KEY in .env}"
+      CRYPTO_KEY: "${CRYPTO_KEY:?Set CRYPTO_KEY in .env}"
+      INITIAL_ADMIN_EMAIL: "${INITIAL_ADMIN_EMAIL:-}"
+      INITIAL_ADMIN_PASSWORD: "${INITIAL_ADMIN_PASSWORD:-}"
+      # Links in emails (account verification, password reset) must point to the public address
+      APP_BASE_URL: "https://${DOMAIN:?Set DOMAIN in .env}"
+      # The application stands behind Caddy - read the real client IP and protocol from X-Forwarded-* headers
+      FORWARD_HEADERS_STRATEGY: native
+    volumes:
+      - uploads:/app/uploads
+    # Memory limit for the container; the JVM heap takes 75% of it (see Dockerfile)
+    mem_limit: 1g
+    logging: *logging
+
+  caddy:
+    image: caddy:2.8-alpine
+    restart: unless-stopped
+    depends_on:
+      - app
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      DOMAIN: "${DOMAIN}"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      # Certificates - kept in a volume, so Caddy does not ask Let's Encrypt for a new one on every restart
+      - caddy-data:/data
+      - caddy-config:/config
+    logging: *logging
+
+volumes:
+  mssql-data:
+  rabbitmq-data:
+  uploads:
+  caddy-data:
+  caddy-config:

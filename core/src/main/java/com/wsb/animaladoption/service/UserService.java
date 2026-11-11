@@ -1,0 +1,132 @@
+package com.wsb.animaladoption.service;
+
+import com.wsb.animaladoption.dto.UserPasswordUpdateDto;
+import com.wsb.animaladoption.dto.UserProfileUpdateDto;
+import com.wsb.animaladoption.dto.UserRegistrationDto;
+import com.wsb.animaladoption.dto.VerificationResult;
+import com.wsb.animaladoption.enums.AccountStateEnum;
+import com.wsb.animaladoption.enums.RoleEnum;
+import com.wsb.animaladoption.model.User;
+
+import java.util.Optional;
+
+/**
+ * Business logic for user accounts: registration, email verification and profile management.
+ */
+public interface UserService {
+
+    /** Registers a new user and sends an email with a verification link. */
+    User registerNewUser(UserRegistrationDto dto);
+
+    /**
+     * Handles a verification link: activates a new account or, if the user requested an email change,
+     * replaces their email with the confirmed new address.
+     */
+    VerificationResult verifyEmail(String token);
+
+    /**
+     * Updates the user's profile data (including the avatar).
+     * A changed email is not applied immediately - it is stored as pending and a confirmation link
+     * is sent to the new address (see {@link #verifyEmail(String)}).
+     *
+     * @return {@code true} if an email change confirmation was sent
+     * @throws IllegalArgumentException if the new email is already used by another account
+     */
+    boolean updateUserProfile(String currentEmail, UserProfileUpdateDto dto);
+
+    /** Checks whether an account with the given email exists. */
+    boolean existsByEmail(String email);
+
+    /**
+     * Changes the user's password after verifying the current password.
+     *
+     * @throws IllegalArgumentException if the current password is incorrect
+     */
+    void changeUserPassword(String email, UserPasswordUpdateDto dto);
+
+    /**
+     * Returns the user with the given email address.
+     *
+     * @throws IllegalArgumentException if the user does not exist
+     */
+    User findByEmail(String email);
+
+    /**
+     * Returns the user with the given id.
+     *
+     * @throws IllegalArgumentException if the user does not exist
+     */
+    User findById(Long id);
+
+    /**
+     * Sends a link for setting a new password ("Forgot password?").
+     * <p>
+     * The method behaves the same whether the account exists or not (no exception, no return value),
+     * so the form cannot be used to check which email addresses are registered.
+     * The link is sent only to confirmed accounts, and not more often than every few minutes.
+     */
+    void requestPasswordReset(String email);
+
+    /** Checks whether the link from the email is still valid (to show the form or an error right away). */
+    boolean isPasswordResetTokenValid(String token);
+
+    /**
+     * Sets a new password using the link from the email. The link works only once.
+     *
+     * @return {@code false} if the link is invalid, already used or expired
+     */
+    boolean resetPassword(String token, String newPassword);
+
+    /** Deletes unused password reset links that have already expired. */
+    int deleteExpiredPasswordResetTokens();
+
+    // --- Blocking accounts (moderation) ---
+
+    /** The longest possible ban: 10 years, i.e. in practice a permanent one. */
+    int MAX_BAN_HOURS = 10 * 365 * 24;
+
+    /**
+     * Blocks the account for the given number of hours. A blocked user cannot log in, and a session
+     * they already have is ended on their next request. Blocking again replaces the previous ban.
+     *
+     * @throws IllegalArgumentException if the reason is empty or the number of hours is outside 1..{@link #MAX_BAN_HOURS}
+     * @throws com.wsb.animaladoption.exception.LocalizedException if the account belongs to a moderator or an administrator
+     */
+    void banUser(Long userId, String reason, int hours);
+
+    /** Lifts the ban before it ends. */
+    void unbanUser(Long userId);
+
+    /** The user with the given email, if their account is blocked right now (with the reason and end time). */
+    Optional<User> findActiveBan(String email);
+
+    /**
+     * Whether the account behind a session still exists, is not blocked and still has the role the session
+     * was created with - one database query.
+     *
+     * @param sessionRole the role stored in the session ({@code null} if it cannot be read)
+     */
+    AccountStateEnum getAccountState(String email, RoleEnum sessionRole);
+
+    // --- Roles (administrators only) ---
+
+    /**
+     * Changes the role of an account (USER / MODERATOR / ADMIN). The change is written to the application log
+     * together with the administrator who made it.
+     *
+     * @param adminEmail email of the administrator making the change
+     * @throws IllegalArgumentException if the user does not exist
+     * @throws com.wsb.animaladoption.exception.LocalizedException if the administrator tries to change their own
+     *         role (so the system cannot be left without an administrator by mistake) or to give a staff role
+     *         to a blocked account
+     */
+    void changeUserRole(Long userId, RoleEnum newRole, String adminEmail);
+
+    /**
+     * Deletes accounts whose email was never confirmed and whose activation link has already expired.
+     * Such an account cannot log in, so it only takes up the email address and space in the database.
+     *
+     * @return number of deleted accounts
+     */
+    int deleteExpiredUnverifiedAccounts();
+}
