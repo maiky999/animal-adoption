@@ -3,6 +3,7 @@ package com.wsb.animaladoption.service.impl;
 import com.wsb.animaladoption.exception.LocalizedException;
 import com.wsb.animaladoption.service.FileStorageService;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -19,15 +20,18 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class FileStorageServiceImpl implements FileStorageService {
 
     /** Users may only upload images - only these extensions and MIME types are accepted. */
     private static final Set<String> ALLOWED_EXTENSIONS = Set.of("jpg", "jpeg", "png", "gif", "webp");
     private static final Set<String> ALLOWED_CONTENT_TYPES = Set.of("image/jpeg", "image/png", "image/gif", "image/webp");
+
+    /** Scales JPG/PNG photos down before saving (see ImageOptimizer for the reasons) */
+    private final ImageOptimizer imageOptimizer;
 
     @Value("${app.upload.dir:uploads}")
     private String uploadDir;
@@ -47,7 +51,12 @@ public class FileStorageServiceImpl implements FileStorageService {
             Path uploadPath = Paths.get(uploadDir).toAbsolutePath().normalize();
             Path targetLocation = uploadPath.resolve(filename);
             Files.createDirectories(uploadPath);
-            Files.copy(file.getInputStream(), targetLocation, StandardCopyOption.REPLACE_EXISTING);
+            if (imageOptimizer.supports(extension)) {
+                imageOptimizer.optimizeAndSave(file.getBytes(), extension, targetLocation);
+            } else {
+                // GIF and WEBP are stored exactly as they were sent
+                Files.copy(file.getInputStream(), targetLocation, StandardCopyOption.REPLACE_EXISTING);
+            }
 
             return "/uploads/" + filename;
         } catch (IOException e) {
@@ -107,9 +116,18 @@ public class FileStorageServiceImpl implements FileStorageService {
         nonEmpty.forEach(this::validateImage);
 
         // A mutable list, because it is assigned directly to the entity's @ElementCollection
-        return nonEmpty.stream()
-                .map(this::storeFile)
-                .collect(Collectors.toCollection(ArrayList::new));
+        List<String> urls = new ArrayList<>();
+        try {
+            for (MultipartFile file : nonEmpty) {
+                urls.add(storeFile(file));
+            }
+        } catch (RuntimeException e) {
+            // Whether the content is a correct image is known only while saving (ImageOptimizer) -
+            // if e.g. the third file is damaged, remove the two already saved, so no files are left without a listing
+            urls.forEach(this::deleteFile);
+            throw e;
+        }
+        return urls;
     }
 
 }

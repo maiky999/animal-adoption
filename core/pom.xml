@@ -53,6 +53,13 @@
 			<groupId>org.springframework</groupId>
 			<artifactId>spring-web</artifactId>
 		</dependency>
+		<!-- Scaling uploaded photos down (ImageOptimizer). Small library without its own dependencies,
+		     also turns photos according to the EXIF orientation saved by phones -->
+		<dependency>
+			<groupId>net.coobird</groupId>
+			<artifactId>thumbnailator</artifactId>
+			<version>0.4.21</version>
+		</dependency>
 		<dependency>
 			<groupId>org.projectlombok</groupId>
 			<artifactId>lombok</artifactId>

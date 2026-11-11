@@ -180,6 +180,10 @@ z `docker-compose.yml`, nawet gdy jest uruchomiony (`web/src/test/resources/appl
 - zmiana adresu e-mail wymaga potwierdzenia linkiem wysłanym na nowy adres; do tego czasu
   obowiązuje dotychczasowy adres,
 - przesyłane pliki muszą być obrazami (JPG, PNG, GIF, WEBP) i są zapisywane pod losową nazwą,
+- zdjęcia JPG i PNG są przed zapisem zmniejszane do 1600 px na dłuższym boku i zapisywane ponownie
+  (`ImageOptimizer`). Pliki są kilka razy mniejsze, znikają metadane EXIF (np. lokalizacja GPS), a plik, który
+  tylko udaje obraz, zostaje odrzucony. Obrazy powyżej 40 megapikseli są odrzucane jeszcze przed dekodowaniem,
+  co chroni przed tzw. bombami dekompresyjnymi. GIF (może być animowany) i WEBP są zapisywane bez zmian,
 - e-maile (weryfikacja konta, ankiety) są wysyłane asynchronicznie przez kolejkę RabbitMQ.
 
 ### Ochrona przed botami i nadużyciami
