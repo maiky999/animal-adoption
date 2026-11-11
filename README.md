@@ -112,12 +112,15 @@ domyślnie blokują wychodzący SMTP. Wtedy maile z linkiem aktywacyjnym nie dot
    Pierwsze uruchomienie trwa kilka minut (pobieranie obrazów i budowanie). Strona jest dostępna pod
    `https://<DOMAIN>`, a konto administratora powstaje z `INITIAL_ADMIN_EMAIL` / `INITIAL_ADMIN_PASSWORD`.
 
-4. **Aktualizacja** po zmianach w repozytorium:
+4. **Aktualizacja** po wypchnięciu zmian do repozytorium (na serwerze, w katalogu `lapka`):
 
    ```bash
-   git pull
-   docker compose -f docker-compose.prod.yml up -d --build
+   bash deploy.sh
    ```
+
+   Skrypt pobiera kod (`git pull`), przebudowuje i podmienia kontener aplikacji, czeka na start Springa
+   i sprawdza, czy strona odpowiada przez HTTPS. Ostrzega też o zmiennych dodanych do `.env.production.example`,
+   których brakuje w `.env`. Gdy aplikacja nie wstanie, pokazuje logi i polecenie powrotu do poprzedniej wersji.
 
    Dane (baza, zdjęcia, certyfikaty) są w wolumenach Dockera i przetrwają przebudowanie kontenerów.
    Nie używaj `down -v`, bo to polecenie usuwa wolumeny razem z danymi.
