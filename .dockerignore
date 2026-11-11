@@ -1,0 +1,11 @@
+# Files that must not be sent to the Docker build (secrets, build output, local data)
+.git
+.idea
+.vscode
+.run
+**/target
+uploads
+.env
+*.env
+.env.*
+*.iml

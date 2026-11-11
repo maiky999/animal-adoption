@@ -67,6 +67,64 @@ Wymagania: JDK 21, Docker (do bazy danych i RabbitMQ).
    Aplikacja działa pod adresem http://localhost:8080. Tabele tworzy Hibernate (`ddl-auto: update`),
    a kategorie zwierząt są dodawane z `web/src/main/resources/data.sql`.
 
+## Wdrożenie na serwer (VPS)
+
+Na serwerze całość działa w Dockerze (`docker-compose.prod.yml`): aplikacja, SQL Server (edycja Express),
+RabbitMQ i [Caddy](https://caddyserver.com), który przyjmuje ruch z internetu i sam pobiera certyfikat HTTPS
+z Let's Encrypt. Z zewnątrz dostępne są tylko porty 80 i 443. Baza danych i RabbitMQ nie wystawiają żadnych portów.
+
+| Plik                       | Rola                                                                     |
+|----------------------------|--------------------------------------------------------------------------|
+| `Dockerfile`               | buduje obraz aplikacji (etap 1: Maven buduje jar, etap 2: tylko JRE + jar) |
+| `docker-compose.prod.yml`  | wszystkie usługi, wolumeny na dane, zdjęcia i certyfikaty                |
+| `Caddyfile`                | reverse proxy z automatycznym HTTPS                                      |
+| `.env.production.example`  | wzór pliku `.env` z hasłami i kluczami (opis w komentarzach)             |
+
+**Wymagania:** VPS z procesorem x86-64 (obraz SQL Server nie działa na ARM), co najmniej 4 GB RAM,
+Ubuntu 22.04/24.04, otwarte porty 22, 80 i 443. Do wysyłki e-maili potrzebne jest konto Gmail
+z [hasłem aplikacji](https://myaccount.google.com/apppasswords). Niektórzy dostawcy (np. DigitalOcean)
+domyślnie blokują wychodzący SMTP. Wtedy maile z linkiem aktywacyjnym nie dotrą.
+
+1. **Docker** (na serwerze):
+
+   ```bash
+   curl -fsSL https://get.docker.com | sh
+   ```
+
+2. **Kod i konfiguracja:**
+
+   ```bash
+   git clone <adres-repozytorium> lapka && cd lapka
+   cp .env.production.example .env
+   nano .env        # uzupełnij wszystkie wartości
+   ```
+
+   `DOMAIN` to własna domena z rekordem A wskazującym na IP serwera albo, bez domeny, darmowy adres
+   [sslip.io](https://sslip.io), czyli IP serwera z myślnikami, np. `203-0-113-10.sslip.io`.
+
+3. **Uruchomienie:**
+
+   ```bash
+   docker compose -f docker-compose.prod.yml up -d --build
+   docker compose -f docker-compose.prod.yml logs -f app     # podgląd logów (Ctrl+C kończy podgląd)
+   ```
+
+   Pierwsze uruchomienie trwa kilka minut (pobieranie obrazów i budowanie). Strona jest dostępna pod
+   `https://<DOMAIN>`, a konto administratora powstaje z `INITIAL_ADMIN_EMAIL` / `INITIAL_ADMIN_PASSWORD`.
+
+4. **Aktualizacja** po zmianach w repozytorium:
+
+   ```bash
+   git pull
+   docker compose -f docker-compose.prod.yml up -d --build
+   ```
+
+   Dane (baza, zdjęcia, certyfikaty) są w wolumenach Dockera i przetrwają przebudowanie kontenerów.
+   Nie używaj `down -v`, bo to polecenie usuwa wolumeny razem z danymi.
+
+**Ważne:** przechowuj kopię `CRYPTO_KEY` poza serwerem. Bez niego zaszyfrowanych danych w bazie
+(telefony, wiadomości czatu) nie da się odczytać.
+
 ## Testy
 
 ```bash
@@ -74,7 +132,8 @@ Wymagania: JDK 21, Docker (do bazy danych i RabbitMQ).
 ```
 
 Testy korzystają z bazy H2 w pamięci i nie wymagają uruchomionego SQL Servera ani RabbitMQ
-(komunikaty o braku połączenia z RabbitMQ w logach testów są niegroźne).
+(komunikaty o braku połączenia z RabbitMQ w logach testów są niegroźne). Nie łączą się też z lokalnym RabbitMQ
+z `docker-compose.yml`, nawet gdy jest uruchomiony (`web/src/test/resources/application.properties`).
 
 ## Bezpieczeństwo – najważniejsze rozwiązania
 

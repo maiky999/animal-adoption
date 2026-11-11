@@ -1,0 +1,11 @@
+# Caddy - reverse proxy in front of the application (used by docker-compose.prod.yml).
+# It automatically obtains and renews a free HTTPS certificate from Let's Encrypt for the address in DOMAIN
+# and redirects HTTP to HTTPS. HTTPS is required - among others by the ALTCHA widget on the registration page.
+#
+# Caddy sets the X-Forwarded-For / X-Forwarded-Proto headers itself (and does not trust the ones sent by clients),
+# so with FORWARD_HEADERS_STRATEGY=native the application sees the real client IP and knows the request came over HTTPS.
+
+{$DOMAIN} {
+	encode zstd gzip
+	reverse_proxy app:8080
+}
