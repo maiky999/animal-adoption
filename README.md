@@ -125,6 +125,18 @@ domyślnie blokują wychodzący SMTP. Wtedy maile z linkiem aktywacyjnym nie dot
    Dane (baza, zdjęcia, certyfikaty) są w wolumenach Dockera i przetrwają przebudowanie kontenerów.
    Nie używaj `down -v`, bo to polecenie usuwa wolumeny razem z danymi.
 
+**Połączenie z bazą na serwerze.** Baza nie jest dostępna z internetu, tylko na serwerze pod `127.0.0.1:1433`.
+Z własnego komputera łączymy się przez tunel SSH (okno z tunelem musi być otwarte przez cały czas pracy):
+
+```bash
+ssh -L 14330:localhost:1433 azureuser@<DOMAIN>
+```
+
+W programie do baz (DBeaver, SSMS, IntelliJ) podajemy: host `localhost`, port `14330`, użytkownik `sa`,
+hasło `DB_PASSWORD` z `.env` na serwerze, baza `animaladoption`, opcja „Trust server certificate” włączona.
+Szybciej, bez tunelu, prosto na serwerze:
+`docker compose -f docker-compose.prod.yml exec mssql /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -C -d animaladoption`.
+
 **Ważne:** przechowuj kopię `CRYPTO_KEY` poza serwerem. Bez niego zaszyfrowanych danych w bazie
 (telefony, wiadomości czatu) nie da się odczytać.
 

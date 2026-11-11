@@ -3,7 +3,8 @@
 #   docker compose -f docker-compose.prod.yml up -d --build
 #
 # Only Caddy is reachable from the internet (ports 80 and 443). The application, the database and RabbitMQ
-# talk to each other over the internal Docker network and publish no ports at all.
+# talk to each other over the internal Docker network. The database is additionally published on the server's
+# 127.0.0.1 only - for an SSH tunnel, not for the internet.
 #
 # ${VAR:?message} - Compose refuses to start when a required variable is missing from .env,
 # instead of starting the application with an empty password.
@@ -28,6 +29,10 @@ services:
       MSSQL_MEMORY_LIMIT_MB: "2048"
       # Password for sqlcmd in the healthcheck - read from the environment, so it is not visible in the command
       SQLCMDPASSWORD: "${DB_PASSWORD}"
+    # 127.0.0.1 - the database is reachable only from the server itself, never from the internet.
+    # To browse it from your own computer use an SSH tunnel (see README, "Połączenie z bazą na serwerze").
+    ports:
+      - "127.0.0.1:1433:1433"
     volumes:
       - mssql-data:/var/opt/mssql
     healthcheck:
