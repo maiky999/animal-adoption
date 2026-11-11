@@ -25,6 +25,7 @@ import com.wsb.animaladoption.service.UserService;
 import com.wsb.translations.TranslationService;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -41,6 +42,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class UserServiceImpl implements UserService {
@@ -308,10 +310,44 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional(readOnly = true)
-    public AccountStateEnum getAccountState(String email) {
+    public AccountStateEnum getAccountState(String email, RoleEnum sessionRole) {
         return userRepository.findByEmail(email)
-                .map(user -> user.isBanned() ? AccountStateEnum.BANNED : AccountStateEnum.ACTIVE)
+                .map(user -> {
+                    if (user.isBanned()) {
+                        return AccountStateEnum.BANNED;
+                    }
+                    return user.getRole() == sessionRole ? AccountStateEnum.ACTIVE : AccountStateEnum.ROLE_CHANGED;
+                })
                 .orElse(AccountStateEnum.MISSING);
+    }
+
+    @Override
+    @Transactional
+    public void changeUserRole(Long userId, RoleEnum newRole, String adminEmail) {
+        if (newRole == null) {
+            throw new IllegalArgumentException("Rola jest wymagana");
+        }
+        User user = findById(userId);
+        // An administrator cannot change their own role - otherwise the last administrator could demote
+        // themselves and nobody would be able to manage roles any more. Another administrator has to do it.
+        if (user.getEmail().equalsIgnoreCase(adminEmail)) {
+            throw new LocalizedException("moderation.users.role.self");
+        }
+        // Staff accounts cannot be blocked from the panel, so a blocked moderator could not be unblocked there.
+        // The ban has to be lifted first.
+        if (newRole != RoleEnum.USER && user.isBanned()) {
+            throw new LocalizedException("moderation.users.role.banned");
+        }
+        RoleEnum oldRole = user.getRole();
+        if (oldRole == newRole) {
+            return;
+        }
+        user.setRole(newRole);
+        userRepository.save(user);
+        // Audit trail: who gave which rights to whom. If the user is logged in, their session gets
+        // the new permissions on the next request (StaleSessionInterceptor).
+        log.info("Role of user id={} ({}) changed from {} to {} by administrator {}",
+                user.getId(), user.getEmail(), oldRole, newRole, adminEmail);
     }
 
     private Optional<PasswordResetToken> findValidResetToken(String token) {

@@ -38,6 +38,12 @@ Wymagania: JDK 21, Docker (do bazy danych i RabbitMQ).
    (opis każdej zmiennej znajduje się w komentarzach). Przed uruchomieniem uzupełnij przynajmniej
    `DB_PASSWORD`, dane poczty (`MAIL_USERNAME`, `MAIL_PASSWORD`) oraz klucze `REMEMBER_ME_KEY` i `CRYPTO_KEY`.
 
+   **Pierwszy administrator.** Ustaw `INITIAL_ADMIN_EMAIL` i `INITIAL_ADMIN_PASSWORD` (min. 12 znaków).
+   Przy starcie aplikacja zakłada to konto tylko wtedy, gdy w bazie nie ma jeszcze żadnego administratora.
+   Jeśli konto z tym e-mailem już istnieje, dostaje rolę administratora, a jego hasło się nie zmienia.
+   Kolejne role (moderator, administrator) nadaje już administrator na profilu użytkownika
+   (`/users/{id}`, sekcja „Rola w serwisie”). Po pierwszym uruchomieniu obie zmienne można usunąć.
+
 2. **Baza danych i RabbitMQ:**
 
    ```bash

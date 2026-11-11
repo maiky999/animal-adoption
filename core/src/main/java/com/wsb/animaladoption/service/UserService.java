@@ -5,6 +5,7 @@ import com.wsb.animaladoption.dto.UserProfileUpdateDto;
 import com.wsb.animaladoption.dto.UserRegistrationDto;
 import com.wsb.animaladoption.dto.VerificationResult;
 import com.wsb.animaladoption.enums.AccountStateEnum;
+import com.wsb.animaladoption.enums.RoleEnum;
 import com.wsb.animaladoption.model.User;
 
 import java.util.Optional;
@@ -99,8 +100,27 @@ public interface UserService {
     /** The user with the given email, if their account is blocked right now (with the reason and end time). */
     Optional<User> findActiveBan(String email);
 
-    /** Whether the account behind a session still exists and is not blocked - one database query. */
-    AccountStateEnum getAccountState(String email);
+    /**
+     * Whether the account behind a session still exists, is not blocked and still has the role the session
+     * was created with - one database query.
+     *
+     * @param sessionRole the role stored in the session ({@code null} if it cannot be read)
+     */
+    AccountStateEnum getAccountState(String email, RoleEnum sessionRole);
+
+    // --- Roles (administrators only) ---
+
+    /**
+     * Changes the role of an account (USER / MODERATOR / ADMIN). The change is written to the application log
+     * together with the administrator who made it.
+     *
+     * @param adminEmail email of the administrator making the change
+     * @throws IllegalArgumentException if the user does not exist
+     * @throws com.wsb.animaladoption.exception.LocalizedException if the administrator tries to change their own
+     *         role (so the system cannot be left without an administrator by mistake) or to give a staff role
+     *         to a blocked account
+     */
+    void changeUserRole(Long userId, RoleEnum newRole, String adminEmail);
 
     /**
      * Deletes accounts whose email was never confirmed and whose activation link has already expired.

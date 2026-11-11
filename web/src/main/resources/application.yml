@@ -62,6 +62,12 @@ server:
 app:
   # Public address of the application - used in links sent by email (e.g. the account verification link)
   base-url: ${APP_BASE_URL:http://localhost:${SERVER_PORT:8080}}
+  # First administrator account, created at startup ONLY if the database has no administrator yet
+  # (see InitialAdminCreator). Further roles are given by an administrator on the user's profile.
+  # After the first start both variables can be removed.
+  initial-admin:
+    email: ${INITIAL_ADMIN_EMAIL:}
+    password: ${INITIAL_ADMIN_PASSWORD:}
   security:
     # Key for the "Remember me" feature
     remember-me-key: ${REMEMBER_ME_KEY}

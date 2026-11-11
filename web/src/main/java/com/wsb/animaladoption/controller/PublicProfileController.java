@@ -1,5 +1,6 @@
 package com.wsb.animaladoption.controller;
 
+import com.wsb.animaladoption.enums.RoleEnum;
 import com.wsb.animaladoption.model.Ad;
 import com.wsb.animaladoption.model.User;
 import com.wsb.animaladoption.service.AdService;
@@ -30,6 +31,8 @@ public class PublicProfileController {
         model.addAttribute("ads", activeAds);
         // Upper limit of the "ban for N hours" field in the moderation panel
         model.addAttribute("maxBanHours", UserService.MAX_BAN_HOURS);
+        // Options of the "role" field in the administrator panel
+        model.addAttribute("roles", RoleEnum.values());
 
         return "user/public-profile";
     }

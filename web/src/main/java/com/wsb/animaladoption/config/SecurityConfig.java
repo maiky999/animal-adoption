@@ -64,6 +64,8 @@ public class SecurityConfig {
                                            RateLimiter rateLimiter, LoginFailureHandler loginFailureHandler) throws Exception {
         http
                 .authorizeHttpRequests(authorize -> authorize
+                        // Administration (giving roles) - only for administrators
+                        .requestMatchers("/admin/**").hasRole("ADMIN")
                         // Moderation (listings, articles, blocking accounts) - for moderators and administrators
                         .requestMatchers("/moderation/**").hasAnyRole(StaffRoles.NAMES)
                         // Adding and editing listings requires login, even though the rest of /ads/** is public

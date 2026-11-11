@@ -433,13 +433,65 @@ class UserServiceTest {
         when(userRepository.findByEmail("brak@wsb.pl")).thenReturn(Optional.empty());
 
         sampleUser.setBannedUntil(LocalDateTime.now().plusHours(1));
-        assertEquals(AccountStateEnum.BANNED, userService.getAccountState("test@wsb.pl"));
+        assertEquals(AccountStateEnum.BANNED, userService.getAccountState("test@wsb.pl", RoleEnum.USER));
         assertTrue(userService.findActiveBan(" Test@WSB.pl ").isPresent());
 
         sampleUser.setBannedUntil(LocalDateTime.now().minusMinutes(1));
-        assertEquals(AccountStateEnum.ACTIVE, userService.getAccountState("test@wsb.pl"));
+        assertEquals(AccountStateEnum.ACTIVE, userService.getAccountState("test@wsb.pl", RoleEnum.USER));
         assertTrue(userService.findActiveBan("test@wsb.pl").isEmpty());
 
-        assertEquals(AccountStateEnum.MISSING, userService.getAccountState("brak@wsb.pl"));
+        assertEquals(AccountStateEnum.MISSING, userService.getAccountState("brak@wsb.pl", RoleEnum.USER));
+    }
+
+    @Test
+    @DisplayName("Account state: a session with a different role than in the database has to be refreshed")
+    void shouldDetectChangedRole() {
+        when(userRepository.findByEmail("test@wsb.pl")).thenReturn(Optional.of(sampleUser));
+        sampleUser.setRole(RoleEnum.MODERATOR);
+
+        assertEquals(AccountStateEnum.ROLE_CHANGED, userService.getAccountState("test@wsb.pl", RoleEnum.USER));
+        assertEquals(AccountStateEnum.ROLE_CHANGED, userService.getAccountState("test@wsb.pl", null));
+        assertEquals(AccountStateEnum.ACTIVE, userService.getAccountState("test@wsb.pl", RoleEnum.MODERATOR));
+    }
+
+    // --- Roles ---
+
+    @Test
+    @DisplayName("Role: an administrator can appoint a moderator")
+    void shouldChangeUserRole() {
+        when(userRepository.findById(1L)).thenReturn(Optional.of(sampleUser));
+
+        userService.changeUserRole(1L, RoleEnum.MODERATOR, "admin@wsb.pl");
+
+        assertEquals(RoleEnum.MODERATOR, sampleUser.getRole());
+        verify(userRepository).save(sampleUser);
+    }
+
+    @Test
+    @DisplayName("Role: an administrator cannot change their own role")
+    void shouldNotChangeOwnRole() {
+        User admin = User.builder().id(3L).email("admin@wsb.pl").role(RoleEnum.ADMIN).build();
+        when(userRepository.findById(3L)).thenReturn(Optional.of(admin));
+
+        LocalizedException e = assertThrows(LocalizedException.class,
+                () -> userService.changeUserRole(3L, RoleEnum.USER, "ADMIN@wsb.pl"));
+
+        assertEquals("moderation.users.role.self", e.getMessageKey());
+        assertEquals(RoleEnum.ADMIN, admin.getRole());
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Role: a blocked account cannot get a staff role, but can stay an ordinary user")
+    void shouldNotPromoteBannedUser() {
+        sampleUser.setBannedUntil(LocalDateTime.now().plusHours(1));
+        when(userRepository.findById(1L)).thenReturn(Optional.of(sampleUser));
+
+        assertThrows(LocalizedException.class, () -> userService.changeUserRole(1L, RoleEnum.MODERATOR, "admin@wsb.pl"));
+        assertThrows(LocalizedException.class, () -> userService.changeUserRole(1L, RoleEnum.ADMIN, "admin@wsb.pl"));
+        userService.changeUserRole(1L, RoleEnum.USER, "admin@wsb.pl");
+
+        assertEquals(RoleEnum.USER, sampleUser.getRole());
+        verify(userRepository, never()).save(any());
     }
 }
