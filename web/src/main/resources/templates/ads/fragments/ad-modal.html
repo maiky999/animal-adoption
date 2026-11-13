@@ -210,10 +210,14 @@
               <i class="ph ph-clipboard-text text-xl mr-2"></i> [[#{ads.modal.fillSurvey}]]
             </button>
 
-            <!-- Call -->
-            <a th:if="${ad.author.mobile != null}" th:href="'tel:' + ${ad.author.mobile}" class="bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 p-3 w-14 rounded-xl transition shadow-sm flex items-center justify-center" th:title="#{ads.modal.call}">
+            <!-- Phone number: the number is NOT in this HTML (protection against bots collecting numbers).
+                 A click fetches it from the server and the response replaces the button - see PublicProfileController.showPhoneNumber -->
+            <button th:if="${ad.author.mobile != null}" type="button"
+                    th:hx-get="@{/users/{id}/phone(id=${ad.author.id})}" hx-swap="outerHTML"
+                    class="bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 p-3 w-14 rounded-xl transition shadow-sm flex items-center justify-center"
+                    th:title="#{ads.modal.showPhone}" th:aria-label="#{ads.modal.showPhone}">
               <i class="ph ph-phone text-2xl text-primary"></i>
-            </a>
+            </button>
           </div>
 
           <div th:if="${#authorization.expression('isAuthenticated()') and #authentication.name == ad.author.email}">

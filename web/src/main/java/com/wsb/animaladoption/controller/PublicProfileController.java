@@ -5,7 +5,9 @@ import com.wsb.animaladoption.model.Ad;
 import com.wsb.animaladoption.model.User;
 import com.wsb.animaladoption.service.AdService;
 import com.wsb.animaladoption.service.UserService;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -50,5 +52,23 @@ public class PublicProfileController {
         model.addAttribute("roles", RoleEnum.values());
 
         return "user/public-profile";
+    }
+
+    /**
+     * The user's phone number, fetched by HTMX only after the "show number" button is clicked
+     * (on a listing and on the public profile). The number is not part of those pages' HTML, so bots that
+     * download pages en masse cannot collect it - they would have to call this address for every user,
+     * which RateLimitFilter limits.
+     * Returns an HTML fragment that replaces the button.
+     */
+    @GetMapping("/{id}/phone")
+    public String showPhoneNumber(@PathVariable Long id, Model model, HttpServletResponse response) {
+        User user = userService.findById(id);
+
+        // The browser and proxies must not store the number (e.g. in the cache of a shared computer)
+        response.setHeader(HttpHeaders.CACHE_CONTROL, "no-store");
+        model.addAttribute("mobile", user.getMobile());
+
+        return "user/fragments/phone-number :: number";
     }
 }

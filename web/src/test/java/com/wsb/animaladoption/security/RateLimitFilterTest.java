@@ -81,6 +81,19 @@ class RateLimitFilterTest {
         assertThat(send("POST", "/messages/1/2", sharedIp)).isEqualTo(200);
     }
 
+    @Test
+    @DisplayName("GET /users/{id}/phone - revealing phone numbers en masse (a bot collecting them) should get 429")
+    void shouldLimitPhoneNumberReveals() throws Exception {
+        // Different users - the limit counts all revealed numbers of one client, not one number
+        for (int i = 1; i <= 30; i++) {
+            assertThat(send("GET", "/users/" + i + "/phone", "203.0.113.7")).isEqualTo(200);
+        }
+        assertThat(send("GET", "/users/31/phone", "203.0.113.7")).isEqualTo(429);
+
+        // The profile page itself is not limited
+        assertThat(send("GET", "/users/31", "203.0.113.7")).isEqualTo(200);
+    }
+
     private static void loginAs(String email) {
         SecurityContextHolder.getContext().setAuthentication(
                 new UsernamePasswordAuthenticationToken(email, null, AuthorityUtils.createAuthorityList("ROLE_USER")));

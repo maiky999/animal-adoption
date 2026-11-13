@@ -13,6 +13,8 @@ import com.wsb.animaladoption.model.User;
 import com.wsb.animaladoption.service.impl.UserServiceImpl;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -30,8 +32,11 @@ import java.util.Set;
 import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.containsString;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
@@ -56,7 +61,10 @@ class PageRenderingI18nTest {
 
     /** HTMX fragments - rendered without the page layout. */
     private static final Set<String> FRAGMENTS = Set.of("/ads/{adId}", "/messages/{adId}/{otherUserId}/new?after=0",
-            "/moderation/pending-badge");
+            "/moderation/pending-badge", "/users/{authorId}/phone");
+
+    /** Phone number of every test user (see persistUser). */
+    private static final String PHONE = "123456789";
 
     @MockitoBean
     private ConnectionFactory connectionFactory;
@@ -129,6 +137,8 @@ class PageRenderingI18nTest {
                 Arguments.of("/login", false, "Witaj ponownie", "Welcome back"),
                 Arguments.of("/register", false, "Dołącz do społeczności Łapki!", "Join the Łapka community!"),
                 Arguments.of("/users/{authorId}", false, "Zaufany opiekun", "Trusted caretaker"),
+                Arguments.of("/users/{authorId}", false, "Pokaż numer telefonu", "Show phone number"),
+                Arguments.of("/users/{authorId}/phone", false, PHONE, PHONE),
                 Arguments.of("/ads/new", true, "Dodaj nowe ogłoszenie", "Add a new listing"),
                 Arguments.of("/ads/{adId}/edit", true, "Zapisz zmiany", "Save changes"),
                 Arguments.of("/my-ads", true, "Weryfikacja", "Under review"),
@@ -172,6 +182,18 @@ class PageRenderingI18nTest {
         }
     }
 
+    @Test
+    @DisplayName("The phone number should not be in the listing or profile HTML - only in the response after a click")
+    void shouldNotPutPhoneNumberInPageHtml() throws Exception {
+        assertThat(render(get(resolve("/ads/{adId}")), false)).doesNotContain(PHONE);
+        assertThat(render(get(resolve("/users/{authorId}")), false)).doesNotContain(PHONE);
+
+        mockMvc.perform(get(resolve("/users/{authorId}/phone")))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Cache-Control", "no-store"))
+                .andExpect(content().string(containsString(PHONE)));
+    }
+
     /** HTMX fragments (e.g. the listing details window) have no layout - the other pages have the full layout. */
     private static boolean isFullPage(String path) {
         return !FRAGMENTS.contains(path);
@@ -198,7 +220,7 @@ class PageRenderingI18nTest {
                 .email(email)
                 .passwordHash("hash")
                 .displayName(name)
-                .mobile("123456789")
+                .mobile(PHONE)
                 .role(role)
                 .userType(type)
                 .isEmailVerified(true)

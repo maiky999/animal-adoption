@@ -62,7 +62,9 @@ public class RateLimitFilter extends OncePerRequestFilter {
             new Rule("new-ad", "POST", "/ads/new", 10, Duration.ofHours(1)),
             new Rule("adoption-form", "POST", "/ads/*/adoption-form", 10, Duration.ofHours(1)),
             // Profile changes - an email change sends a confirmation link
-            new Rule("profile", "POST", "/profile/**", 10, Duration.ofMinutes(10))
+            new Rule("profile", "POST", "/profile/**", 10, Duration.ofMinutes(10)),
+            // Revealing phone numbers - a person checks a few listings, a bot collecting numbers needs thousands
+            new Rule("phone", "GET", "/users/*/phone", 30, Duration.ofHours(1))
     );
 
     private final RateLimiter rateLimiter;

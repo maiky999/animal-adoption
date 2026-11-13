@@ -1,0 +1,12 @@
+<!DOCTYPE html>
+<html lang="pl" xmlns:th="http://www.thymeleaf.org">
+<body>
+<!-- Phone number returned by GET /users/{id}/phone - HTMX puts it in place of the "show number" button
+     (on a listing and on the public profile). select-all: one click selects the whole number for copying. -->
+<span th:fragment="number"
+      class="bg-white border border-gray-200 text-gray-800 py-2 px-4 rounded-xl shadow-sm flex items-center justify-center font-bold whitespace-nowrap select-all fade-in">
+  <i class="ph ph-phone text-xl text-primary mr-2"></i>
+  <span th:text="${mobile}">123456789</span>
+</span>
+</body>
+</html>

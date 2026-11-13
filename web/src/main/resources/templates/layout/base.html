@@ -85,6 +85,14 @@
 
 <div id="modal-container"></div>
 
+<!-- Message shown when an HTMX request is rejected by RateLimitFilter (HTTP 429), e.g. too many phone numbers
+     revealed. Without it the button would simply do nothing. Above the listing window (z-[100]) and the dialogs (z-[110]). -->
+<div id="rate-limit-toast" role="alert"
+     class="hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-[120] w-[calc(100%-2rem)] max-w-md bg-textMain text-white text-sm font-medium px-5 py-3 rounded-xl shadow-lg flex items-center gap-3 fade-in">
+    <i class="ph-fill ph-hourglass-medium text-2xl text-primary flex-shrink-0"></i>
+    <span>[[#{error.tooManyRequests.text}]]</span>
+</div>
+
 <footer class="bg-surface border-t border-accent mt-auto py-10 relative z-10">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center">
         <div class="flex items-center mb-4 md:mb-0">
@@ -113,6 +121,18 @@
                 evt.detail.shouldSwap = false;
                 window.location.href = finalUrl;
             }
+        });
+        // HTMX does not swap error responses (4xx/5xx) into the page, so a request rejected by the request limits
+        // would end silently. For 429 we show the message for a few seconds instead.
+        let rateLimitToastTimer;
+        document.body.addEventListener('htmx:responseError', function(evt) {
+            if (evt.detail.xhr.status !== 429) {
+                return;
+            }
+            const toast = document.getElementById('rate-limit-toast');
+            toast.classList.remove('hidden');
+            clearTimeout(rateLimitToastTimer);
+            rateLimitToastTimer = setTimeout(() => toast.classList.add('hidden'), 6000);
         });
         document.body.addEventListener('htmx:afterSwap', function(evt) {
             if(evt.detail.target.id === 'modal-container' && evt.detail.target.innerHTML.trim() !== '') {

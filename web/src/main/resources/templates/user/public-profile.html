@@ -45,10 +45,13 @@
                     <i class="ph-fill ph-chat-teardrop-dots mr-2 text-lg text-primary"></i> [[#{common.sendMessage}]]
                 </button>
 
-                <a th:if="${profileUser.mobile != null}" th:href="'tel:' + ${profileUser.mobile}" class="bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-700 py-2 px-5 rounded-xl text-sm font-bold transition flex items-center shadow-sm">
+                <!-- The number is fetched only after a click (it is not in the page HTML) - see PublicProfileController.showPhoneNumber -->
+                <button th:if="${profileUser.mobile != null}" type="button"
+                        th:hx-get="@{/users/{id}/phone(id=${profileUser.id})}" hx-swap="outerHTML"
+                        class="bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-700 py-2 px-5 rounded-xl text-sm font-bold transition flex items-center shadow-sm">
                     <i class="ph-fill ph-phone mr-2 text-lg text-primary"></i>
-                    <span th:text="${profileUser.mobile}">123456789</span>
-                </a>
+                    [[#{publicProfile.showPhone}]]
+                </button>
             </div>
         </div>
 
