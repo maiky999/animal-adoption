@@ -70,6 +70,7 @@ class AuthControllerTest {
                 .sessionAttr(RegistrationBotGuard.FORM_SHOWN_AT, Instant.now().minusSeconds(10))
                 .param("email", email)
                 .param("password", password)
+                .param("confirmPassword", password)
                 .param("displayName", displayName)
                 .param("mobile", mobile)
                 .param("userType", userType)
@@ -152,6 +153,17 @@ class AuthControllerTest {
                 .andExpect(view().name("user/register"))
                 .andExpect(model().attributeHasFieldErrors("userRegistrationDto",
                         "email", "password", "displayName", "mobile", "userType"));
+
+        verify(userService, never()).registerNewUser(any(UserRegistrationDto.class));
+    }
+
+    @Test
+    @DisplayName("POST /register - should return the form when the repeated password does not match")
+    void shouldRejectRegistrationWhenPasswordsDoNotMatch() throws Exception {
+        mockMvc.perform(validHumanRegistration().param("confirmPassword", "inneHaslo123"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("user/register"))
+                .andExpect(model().attributeHasFieldErrors("userRegistrationDto", "passwordConfirmed"));
 
         verify(userService, never()).registerNewUser(any(UserRegistrationDto.class));
     }

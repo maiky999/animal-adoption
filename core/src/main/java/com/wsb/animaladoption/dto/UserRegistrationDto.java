@@ -19,6 +19,8 @@ public class UserRegistrationDto {
     @Size(min = 8, message = "{validation.password.size}")
     private String password;
 
+    private String confirmPassword;
+
     @NotBlank(message = "{validation.displayName.required}")
     @Size(max = 100, message = "{validation.displayName.size}")
     private String displayName;
@@ -29,4 +31,10 @@ public class UserRegistrationDto {
 
     @NotNull(message = "{validation.userType.required}")
     private UserTypeEnum userType;
+
+    /** Typing the password twice protects against a typo in a field the user cannot see (same as PasswordResetDto). */
+    @AssertTrue(message = "{validation.password.mismatch}")
+    public boolean isPasswordConfirmed() {
+        return password != null && password.equals(confirmPassword);
+    }
 }

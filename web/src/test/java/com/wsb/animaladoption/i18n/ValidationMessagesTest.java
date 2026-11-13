@@ -10,7 +10,10 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.i18n.LocaleContextHolder;
+import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.util.Collections;
 import java.util.Locale;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -56,6 +59,17 @@ class ValidationMessagesTest {
         dto.setTitle("Krótki");
 
         assertThat(messagesFor(dto)).contains("Title must be between 10 and 150 characters long");
+    }
+
+    @Test
+    @DisplayName("Too many photos - the message should contain the limit from AdCreateDto.MAX_IMAGES")
+    void shouldTranslateTooManyImagesMessage() {
+        LocaleContextHolder.setLocale(Locale.of("pl"));
+        AdCreateDto dto = new AdCreateDto();
+        dto.setImageFiles(Collections.<MultipartFile>nCopies(AdCreateDto.MAX_IMAGES + 1,
+                new MockMultipartFile("imageFiles", "zdjecie.jpg", "image/jpeg", new byte[]{1})));
+
+        assertThat(messagesFor(dto)).contains("Można dodać maksymalnie 10 zdjęć");
     }
 
     private Set<String> messagesFor(Object dto) {
