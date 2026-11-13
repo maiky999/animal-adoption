@@ -34,3 +34,6 @@ build/
 ### VS Code ###
 .vscode/
 uploads/
+
+### Database backups (personal data) ###
+backups/

@@ -62,6 +62,15 @@ server:
 app:
   # Public address of the application - used in links sent by email (e.g. the account verification link)
   base-url: ${APP_BASE_URL:http://localhost:${SERVER_PORT:8080}}
+  # Uploaded photos (JPG, PNG) are scaled down before saving - see ImageOptimizer
+  upload:
+    image:
+      # Longest side of a saved photo in pixels (smaller photos are not enlarged)
+      max-dimension: 1600
+      # JPEG quality 0-1: 0.85 is visually the same as the original, and the file is several times smaller
+      jpeg-quality: 0.85
+      # Photos with more pixels are rejected - protection against "decompression bombs" that would use up the memory
+      max-megapixels: 40
   # First administrator account, created at startup ONLY if the database has no administrator yet
   # (see InitialAdminCreator). Further roles are given by an administrator on the user's profile.
   # After the first start both variables can be removed.

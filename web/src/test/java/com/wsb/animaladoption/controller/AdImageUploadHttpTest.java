@@ -22,6 +22,11 @@ import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.transaction.support.TransactionTemplate;
 
+import javax.imageio.ImageIO;
+import java.awt.Color;
+import java.awt.GradientPaint;
+import java.awt.Graphics2D;
+import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.net.CookieManager;
 import java.net.URI;
@@ -122,7 +127,7 @@ class AdImageUploadHttpTest {
         HttpResponse<String> response = send(HttpRequest.newBuilder(uri("/ads/new"))
                 .header("Content-Type", "multipart/form-data; boundary=" + boundary)
                 .POST(HttpRequest.BodyPublishers.ofByteArray(
-                        multipart(boundary, fields, "imageFiles", "burek.jpg", new byte[24 * 1024]))));
+                        multipart(boundary, fields, "imageFiles", "burek.jpg", samplePhoto(2400, 1800)))));
 
         assertThat(response.statusCode()).isEqualTo(302);
         assertThat(response.headers().firstValue("Location").orElse("")).endsWith("/my-ads");
@@ -134,8 +139,25 @@ class AdImageUploadHttpTest {
                 adRepository.findById(ads.get(0).getId()).orElseThrow().getImageUrls().size());
         assertThat(imageCount).isEqualTo(1);
         try (var files = Files.list(uploadDir)) {
-            assertThat(files.count()).isEqualTo(1);
+            List<Path> saved = files.toList();
+            assertThat(saved).hasSize(1);
+            // The photo was scaled down before saving (ImageOptimizer): 2400x1800 -> 1600x1200
+            BufferedImage savedImage = ImageIO.read(saved.get(0).toFile());
+            assertThat(savedImage.getWidth()).isEqualTo(1600);
+            assertThat(savedImage.getHeight()).isEqualTo(1200);
         }
+    }
+
+    /** A real JPEG photo - the application checks that the uploaded file really is an image. */
+    private static byte[] samplePhoto(int width, int height) throws Exception {
+        BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+        Graphics2D g = image.createGraphics();
+        g.setPaint(new GradientPaint(0, 0, Color.ORANGE, width, height, Color.BLUE));
+        g.fillRect(0, 0, width, height);
+        g.dispose();
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        ImageIO.write(image, "jpg", out);
+        return out.toByteArray();
     }
 
     // --- tiny HTTP helpers ---
