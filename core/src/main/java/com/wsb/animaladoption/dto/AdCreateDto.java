@@ -14,6 +14,9 @@ import java.util.List;
 
 @Data
 public class AdCreateDto {
+    /** Maximum number of photos in one listing. */
+    public static final int MAX_IMAGES = 10;
+
     @NotBlank(message = "{validation.title.required}")
     @Size(min = 10, max = 150, message = "{validation.title.size}")
     private String title;
@@ -28,6 +31,8 @@ public class AdCreateDto {
     @NotBlank(message = "{validation.location.required}")
     private String location;
 
+    // The same number is checked in the browser (ads/form.html) - change both places together
+    @Size(max = MAX_IMAGES, message = "{validation.ad.images.max}")
     private List<MultipartFile> imageFiles;
 
     // --- Information about the animal (optional - null means "not specified") ---

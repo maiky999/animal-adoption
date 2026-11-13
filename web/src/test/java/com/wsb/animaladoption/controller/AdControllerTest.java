@@ -21,6 +21,7 @@ import org.springframework.core.MethodParameter;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.test.web.servlet.MockMvc;
@@ -40,6 +41,7 @@ import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -179,6 +181,26 @@ class AdControllerTest {
                 .andExpect(flash().attributeExists("infoMessage"));
 
         verify(adService, times(1)).createAd(any(AdCreateDto.class), eq("autor@example.com"));
+    }
+
+    @Test
+    @DisplayName("POST /ads/new - more photos than the limit should return the form with an error, without saving")
+    void shouldRejectTooManyImages() throws Exception {
+        var request = multipart("/ads/new")
+                .param("title", "Pies Burek szuka domu")
+                .param("description", "Opis pieska do adopcji")
+                .param("location", "Katowice")
+                .param("categoryId", "1");
+        for (int i = 0; i <= AdCreateDto.MAX_IMAGES; i++) {
+            request.file(new MockMultipartFile("imageFiles", "zdjecie" + i + ".jpg", "image/jpeg", new byte[]{1}));
+        }
+
+        mockMvc.perform(request)
+                .andExpect(status().isOk())
+                .andExpect(view().name("ads/form"))
+                .andExpect(model().attributeHasFieldErrors("adCreateDto", "imageFiles"));
+
+        verify(adService, never()).createAd(any(), any());
     }
 
     @Test
